@@ -12,7 +12,25 @@ npm run dev        # http://localhost:3000
 npm run build && npm start
 npm run verify     # data-layer checks against the real data
 npm run snapshot   # refresh the bundled data snapshot
+BASE_PATH=/dashboard npm run build:static   # static export to ./out (what GitHub Pages serves)
 ```
+
+## Live preview (GitHub Pages)
+
+`.github/workflows/pages.yml` builds and deploys the site on every push to the default branch, and again **every hour**, so new results and live scores keep arriving without a commit. The runner has open internet access, so each build includes openfootball's latest data and the ESPN live overlay. The URL is shown on the workflow run and under *Deployments*: `https://<owner>.github.io/<repo>/`.
+
+The same code runs in two modes:
+
+| | Node server (`npm start`) | Static (`STATIC_EXPORT=1`) |
+| --- | --- | --- |
+| Pages | Pre-rendered and refreshed in the background (ISR) | Pre-rendered at build time |
+| Data API | `/data/{season}/{league}.json` plus the request-time `/api/*` routes | `/data/{season}/{league}.json` as plain files |
+| Live scores | ESPN overlay, about 30 s fresh | ESPN overlay as of the latest build (hourly) |
+
+**URLs:**
+- The current season is unprefixed: `/league/epl`, `/team/arsenal`.
+- Past seasons are prefixed: `/2025-26/league/epl`.
+- Matches render from data on the client: `/match?id=…`.
 
 ## Data pipeline
 
@@ -50,10 +68,11 @@ If a kick-off has passed but no feed has a result yet, the match shows as **awai
   - Fixtures: a matchday browser.
   - Insights: the results matrix, goals by half, game state, scoreline grid and biggest wins.
 - **Team (`/team/[slug]`):** a hero in the club's colours, position history, a match-by-match goals chart, home/away splits and streaks.
-- **Match (`/match/[id]`):** the score, half-time to full-time, the table before and after, form going in, and head-to-head.
+- **Match (`/match?id=…`):** the score, half-time to full-time, the table before and after, form going in, and head-to-head.
 - **Compare (`/compare`):** two teams' profiles as mirrored bars, their position lines overlaid, and their meetings.
 - **JSON API:**
-  - `/api/matches?date=&tz=`
+  - `/data/{season}/{league}.json` (static)
+  - `/api/matches?date=&tz=` (server mode only)
   - `/api/leagues/[id]/standings?season=&venue=`
   - `/api/teams/[slug]`
   - `/api/health`

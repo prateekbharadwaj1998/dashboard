@@ -5,6 +5,7 @@ import type { Match } from "@/lib/data/types";
 import { teamBySlug } from "@/lib/data/teams";
 import { Crest } from "@/components/ui/Crest";
 import { CountUp } from "@/components/ui/CountUp";
+import { seasonHref } from "@/lib/paths";
 
 const spring = { type: "spring", stiffness: 260, damping: 26 } as const;
 
@@ -14,7 +15,7 @@ export function ScoreHero({ match: m, logos }: { match: Match; logos: Record<str
   const comeback =
     m.status === "ft" && m.ht && m.ft && ((m.ht[0] < m.ht[1] && m.ft[0] > m.ft[1]) || (m.ht[1] < m.ht[0] && m.ft[1] > m.ft[0]));
   const side = (slug: string, align: "left" | "right") => (
-    <Link href={`/team/${slug}`} className="group flex min-w-0 flex-1 flex-col items-center gap-3">
+    <Link href={seasonHref(`/team/${slug}`, m.season)} className="group flex min-w-0 flex-1 flex-col items-center gap-3">
       <motion.div
         initial={{ opacity: 0, x: align === "left" ? -24 : 24, scale: 0.9 }}
         animate={{ opacity: 1, x: 0, scale: 1 }}

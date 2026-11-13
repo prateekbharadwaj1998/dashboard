@@ -1,0 +1,92 @@
+name: Deploy preview to GitHub Pages
+
+# Builds Halfspace as a static site with the freshest data available on the
+# runner (openfootball + ESPN live overlay) and publishes it to GitHub Pages.
+# Re-runs hourly so results keep flowing in without a new commit.
+
+on:
+  push:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify data layer
+        run: npm run verify
+
+      - name: Typecheck & server build
+        run: npm run build
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Static export
+        env:
+          STATIC_EXPORT: "1"
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: |
+          rm -rf .next out
+          npm run build
+          touch out/.nojekyll
+          echo "Exported $(find out -name '*.html' | wc -l) pages"
+          grep -o '"sources":\[[^]]*\]' out/data/2026-27/epl.json | head -1
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    # Only the default branch publishes; other branches still get the build check above.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Summary
+        run: |
+          {
+            echo "## 🚀 Live preview"
+            echo
+            echo "**${{ steps.deployment.outputs.page_url }}**"
+            echo
+            echo "| Page | Link |"
+            echo "| --- | --- |"
+            echo "| Matches | ${{ steps.deployment.outputs.page_url }} |"
+            echo "| Premier League | ${{ steps.deployment.outputs.page_url }}league/epl/ |"
+            echo "| Insights (2025/26) | ${{ steps.deployment.outputs.page_url }}2025-26/league/epl/stats/ |"
+            echo "| Compare | ${{ steps.deployment.outputs.page_url }}compare/ |"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { teamBySlug } from "@/lib/data/teams";
 import type { Match } from "@/lib/data/types";
 import { ChartTooltip, useSize } from "./core";
+import { matchHref } from "@/lib/paths";
 
 /** Home × away grid of every result. Cell tint = home team's result; the score is printed in the cell. */
 export function ResultsMatrix({ teams, matches }: { teams: string[]; matches: Match[] }) {
@@ -53,7 +54,7 @@ export function ResultsMatrix({ teams, matches }: { teams: string[]; matches: Ma
                         setHover({ m, h, a, x: box.left - wrap.left + box.width / 2, y: box.top - wrap.top + box.height / 2 });
                       }}
                       onPointerLeave={() => setHover(null)}
-                      onClick={() => m && router.push(`/match/${m.id}`)}
+                      onClick={() => m && router.push(matchHref(m.id))}
                       aria-label={`${teamBySlug(h)?.short} vs ${teamBySlug(a)?.short}${ft ? ` ${ft[0]}–${ft[1]}` : ""}`}
                       className="tnum flex h-full w-full items-center justify-center rounded-[4px] text-[10.5px] font-medium transition-[filter] hover:brightness-125 hover:ring-1 hover:ring-fg-3"
                       style={{

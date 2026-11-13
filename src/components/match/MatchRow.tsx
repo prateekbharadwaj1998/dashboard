@@ -6,6 +6,7 @@ import type { Match } from "@/lib/data/types";
 import { teamBySlug } from "@/lib/data/teams";
 import { Crest } from "@/components/ui/Crest";
 import { LocalTime } from "./LocalTime";
+import { matchHref } from "@/lib/paths";
 
 function Status({ m, tz }: { m: Match; tz?: string }) {
   if (m.status === "live" || m.status === "ht")
@@ -55,7 +56,7 @@ export function MatchRow({
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: Math.min(index, 12) * 0.03 }}
     >
       <Link
-        href={`/match/${m.id}`}
+        href={matchHref(m.id)}
         title={m.ht && m.status === "ft" ? `Half-time ${m.ht[0]}–${m.ht[1]}` : undefined}
         className={clsx(
           "group grid h-11 items-center gap-2 rounded-lg px-2 transition-colors duration-100 hover:bg-hover",
@@ -100,11 +101,11 @@ export function MatchRow({
         </span>
         <span className={clsx("items-center justify-end gap-1.5", compact ? "hidden" : "hidden sm:flex")}>
           {comeback && (
-            <span className="hidden rounded-[4px] bg-accent-soft px-1.5 text-[10px] font-medium text-accent-text sm:inline" title="Trailed at half-time, won at full-time">
+            <span className="hidden whitespace-nowrap rounded-[4px] bg-accent-soft px-1.5 text-[10px] font-medium text-accent-text xl:inline" title="Trailed at half-time, won at full-time">
               Comeback
             </span>
           )}
-          {m.ht && m.status === "ft" && <span className="tnum text-2xs text-fg-4">HT {m.ht[0]}–{m.ht[1]}</span>}
+          {m.ht && m.status === "ft" && <span className="tnum whitespace-nowrap text-2xs text-fg-4">HT {m.ht[0]}–{m.ht[1]}</span>}
         </span>
       </Link>
     </motion.div>

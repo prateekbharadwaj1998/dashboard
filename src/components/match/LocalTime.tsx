@@ -1,13 +1,17 @@
 "use client";
+import { useEffect, useState } from "react";
 
-/** Formats an instant in the viewer's own timezone. Server renders with the tz cookie, so hydration matches. */
+/**
+ * Formats an instant in the viewer's own timezone. The pre-rendered HTML uses `tz`
+ * (or UTC); after mount it switches to the browser's zone.
+ */
 export function LocalTime({ iso, tz, opts }: { iso: string; tz?: string; opts: Intl.DateTimeFormatOptions }) {
-  let zone = tz;
-  if (typeof window !== "undefined") {
+  const [zone, setZone] = useState(tz ?? "UTC");
+  useEffect(() => {
     try {
-      zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setZone(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
     } catch {}
-  }
+  }, []);
   let text: string;
   try {
     text = new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: zone }).format(new Date(iso));

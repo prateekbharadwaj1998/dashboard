@@ -11,6 +11,7 @@ import { Crest } from "@/components/ui/Crest";
 import { FormStrip } from "@/components/ui/FormPill";
 import { FollowButton, useFavorites } from "@/components/ui/Favorites";
 import { Segmented } from "@/components/ui/Segmented";
+import { useSeasonHref } from "@/lib/useSeasonHref";
 
 type Filter = Venue | "form";
 
@@ -39,6 +40,7 @@ export function StandingsTable({
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const { following } = useFavorites();
+  const href = useSeasonHref();
   const rows = useMemo(
     () =>
       computeTable(league, matches, teams, filter === "form" ? { lastN: 5 } : { venue: filter }),
@@ -112,7 +114,7 @@ export function StandingsTable({
                       <span className="tnum inline-flex w-5 justify-center text-xs text-fg-3">{r.pos}</span>
                     </td>
                     <td className="min-w-0 py-0">
-                      <Link href={`/team/${r.team}`} className="flex min-w-0 items-center gap-2.5">
+                      <Link href={href(`/team/${r.team}`)} className="flex min-w-0 items-center gap-2.5">
                         <Crest slug={r.team} size={18} logo={logos?.[r.team]} />
                         <span className="truncate text-fg">{teamBySlug(r.team)?.short}</span>
                         {delta !== 0 && (

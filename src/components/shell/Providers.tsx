@@ -15,13 +15,6 @@ export function Providers({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setTheme((document.documentElement.dataset.theme as Theme) || "dark");
-    // remember the viewer's timezone so the server can bucket matches by *their* day
-    try {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (tz && !document.cookie.includes(`tz=${encodeURIComponent(tz)}`)) {
-        document.cookie = `tz=${encodeURIComponent(tz)}; path=/; max-age=31536000; samesite=lax`;
-      }
-    } catch {}
   }, []);
 
   const toggle = useCallback(() => {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { FormEntry } from "@/lib/data/types";
 import { teamBySlug } from "@/lib/data/teams";
 import { ChartTooltip, EASE, Legend, smoothPath, useSize } from "./core";
+import { matchHref } from "@/lib/paths";
 
 /** Match-by-match goals: scored above the baseline, conceded below. */
 export function GoalsTimeline({ entries, height = 200 }: { entries: FormEntry[]; height?: number }) {
@@ -78,7 +79,7 @@ export function GoalsTimeline({ entries, height = 200 }: { entries: FormEntry[];
                     height={ih}
                     fill="transparent"
                     onPointerEnter={() => setHi(i)}
-                    onClick={() => router.push(`/match/${e.matchId}`)}
+                    onClick={() => router.push(matchHref(e.matchId))}
                     className="cursor-pointer"
                   />
                 </g>

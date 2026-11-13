@@ -1,5 +1,5 @@
 "use client";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronsUpDown } from "lucide-react";
@@ -11,6 +11,7 @@ import { Crest } from "./Crest";
 export function TeamPicker({ param, value, teams, accent }: { param: "a" | "b"; value: string; teams: { slug: string; league: LeagueId }[]; accent: string }) {
   const router = useRouter();
   const sp = useSearchParams();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -29,7 +30,7 @@ export function TeamPicker({ param, value, teams, accent }: { param: "a" | "b"; 
   const pick = (slug: string) => {
     const next = new URLSearchParams(sp.toString());
     next.set(param, slug);
-    router.push(`/compare?${next}`, { scroll: false });
+    router.push(`${pathname}?${next}`, { scroll: false });
     setOpen(false);
     setQ("");
   };

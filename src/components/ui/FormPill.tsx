@@ -2,6 +2,7 @@
 import type { FormEntry, Outcome } from "@/lib/data/types";
 import { teamBySlug } from "@/lib/data/teams";
 import Link from "next/link";
+import { matchHref } from "@/lib/paths";
 import clsx from "clsx";
 import { motion } from "motion/react";
 
@@ -18,7 +19,7 @@ export function FormPill({ e, size = 18, index = 0, animate = true }: { e: FormE
       className="group/pill relative inline-flex"
     >
       <Link
-        href={`/match/${e.matchId}`}
+        href={matchHref(e.matchId)}
         aria-label={title}
         className={clsx(
           "inline-flex items-center justify-center rounded-[4px] text-[10px] font-semibold text-black/80 transition-transform duration-100 hover:scale-110",

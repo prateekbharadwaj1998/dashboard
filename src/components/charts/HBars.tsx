@@ -5,6 +5,7 @@ import Link from "next/link";
 import { teamBySlug } from "@/lib/data/teams";
 import { Crest } from "@/components/ui/Crest";
 import { Legend } from "./core";
+import { useSeasonHref } from "@/lib/useSeasonHref";
 
 export interface StackRow {
   team: string;
@@ -17,6 +18,7 @@ export function StackedHBars({ rows, keys, colors, max }: { rows: StackRow[]; ke
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.15 });
   const [hover, setHover] = useState<string | null>(null);
+  const href = useSeasonHref();
   const top = max ?? Math.max(1, ...rows.map((r) => r.values.reduce((a, b) => a + b, 0)));
   return (
     <div ref={ref}>
@@ -28,7 +30,7 @@ export function StackedHBars({ rows, keys, colors, max }: { rows: StackRow[]; ke
           const total = r.values.reduce((a, b) => a + b, 0);
           return (
             <Link
-              href={`/team/${r.team}`}
+              href={href(`/team/${r.team}`)}
               key={r.team}
               onPointerEnter={() => setHover(r.team)}
               onPointerLeave={() => setHover(null)}
@@ -84,6 +86,7 @@ export function DivergingHBars({
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.15 });
   const max = Math.max(1, ...rows.flatMap((r) => [r.pos, r.neg]));
+  const href = useSeasonHref();
   return (
     <div ref={ref}>
       <div className="mb-3">
@@ -97,7 +100,7 @@ export function DivergingHBars({
       <div className="space-y-[3px]">
         {rows.map((r, i) => (
           <Link
-            href={`/team/${r.team}`}
+            href={href(`/team/${r.team}`)}
             key={r.team}
             className="grid grid-cols-[28px_1fr_104px_1fr_28px] items-center gap-2 rounded-md px-1 py-[3px] hover:bg-hover"
           >

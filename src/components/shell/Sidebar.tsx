@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { seasonHref, splitSeason } from "@/lib/paths";
 import { AnimatePresence, motion } from "motion/react";
 import clsx from "clsx";
 import { CalendarDays, GitCompareArrows, Search, Star, X } from "lucide-react";
@@ -39,10 +40,8 @@ function NavItem({ href, active, icon, children, trailing }: { href: string; act
 }
 
 function SidebarInner() {
-  const pathname = usePathname();
-  const sp = useSearchParams();
-  const season = sp.get("season");
-  const q = season ? `?season=${season}` : "";
+  const { season, rest: pathname } = splitSeason(usePathname() ?? "/");
+  const href = (p: string) => seasonHref(p, season);
   const { following } = useFavorites();
   const { setOpen } = usePalette();
 
@@ -75,7 +74,7 @@ function SidebarInner() {
           <NavItem href="/" active={pathname === "/"} icon={<CalendarDays size={15} />}>
             Matches
           </NavItem>
-          <NavItem href={`/compare${q}`} active={pathname.startsWith("/compare")} icon={<GitCompareArrows size={15} />}>
+          <NavItem href={href("/compare")} active={pathname.startsWith("/compare")} icon={<GitCompareArrows size={15} />}>
             Compare
           </NavItem>
         </div>
@@ -84,7 +83,7 @@ function SidebarInner() {
           <div className="mb-1 px-2 text-2xs font-medium text-fg-4">Leagues</div>
           <div className="space-y-px">
             {LEAGUES.map((l) => (
-              <NavItem key={l.id} href={`/league/${l.id}${q}`} active={pathname.startsWith(`/league/${l.id}`)} icon={<LeagueMark id={l.id} size={15} />}>
+              <NavItem key={l.id} href={href(`/league/${l.id}`)} active={pathname.startsWith(`/league/${l.id}`)} icon={<LeagueMark id={l.id} size={15} />}>
                 {l.name}
               </NavItem>
             ))}
@@ -104,7 +103,7 @@ function SidebarInner() {
             ) : (
               following.map((slug) => (
                 <motion.div key={slug} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                  <NavItem href={`/team/${slug}${q}`} active={pathname === `/team/${slug}`} icon={<Crest slug={slug} size={14} />}>
+                  <NavItem href={href(`/team/${slug}`)} active={pathname === `/team/${slug}`} icon={<Crest slug={slug} size={14} />}>
                     {teamBySlug(slug)?.short ?? slug}
                   </NavItem>
                 </motion.div>

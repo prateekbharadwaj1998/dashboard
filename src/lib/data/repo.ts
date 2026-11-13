@@ -1,5 +1,4 @@
 import "server-only";
-import { cache } from "react";
 import { fetchEspnRange, resolveEspnTeam } from "./espn";
 import { LEAGUES, LEAGUE_BY_ID, CURRENT_SEASON } from "./leagues";
 import { fetchOpenFootball, matchId, normalizeOpenFootball } from "./openfootball";
@@ -21,7 +20,21 @@ export interface LeagueSeason {
  *   ESPN scoreboard (live + recent finals + crests)   ← overlay, current season only
  *   bundled snapshot                                  ← fallback if openfootball is unreachable
  */
-export const getLeagueSeason = cache(async (league: LeagueId, season: SeasonId): Promise<LeagueSeason> => {
+// Process-level memo: dedupes work across requests and across thousands of pages during a static build.
+const MEMO_TTL = 60_000;
+const memo = new Map<string, { at: number; p: Promise<LeagueSeason> }>();
+
+export function getLeagueSeason(league: LeagueId, season: SeasonId): Promise<LeagueSeason> {
+  const key = `${league}:${season}`;
+  const hit = memo.get(key);
+  if (hit && Date.now() - hit.at < MEMO_TTL) return hit.p;
+  const p = loadLeagueSeason(league, season);
+  p.catch(() => memo.delete(key));
+  memo.set(key, { at: Date.now(), p });
+  return p;
+}
+
+async function loadLeagueSeason(league: LeagueId, season: SeasonId): Promise<LeagueSeason> {
   const cfg = LEAGUE_BY_ID[league];
   const of = await fetchOpenFootball(cfg, season);
   const matches = of ? normalizeOpenFootball(of.raw, cfg, season) : [];
@@ -68,11 +81,9 @@ export const getLeagueSeason = cache(async (league: LeagueId, season: SeasonId):
     logos,
     meta: { sources, fetchedAt: new Date().toISOString(), lastResultAt, liveOverlay },
   };
-});
+}
 
-export const getAllLeagues = cache(async (season: SeasonId) =>
-  Promise.all(LEAGUES.map((l) => getLeagueSeason(l.id, season))),
-);
+export const getAllLeagues = (season: SeasonId) => Promise.all(LEAGUES.map((l) => getLeagueSeason(l.id, season)));
 
 /** Find which league a team plays in for a season. */
 export async function findTeamLeague(slug: string, season: SeasonId) {

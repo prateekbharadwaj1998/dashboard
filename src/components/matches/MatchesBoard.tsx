@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown, Star, ArrowRight } from "lucide-react";
 import clsx from "clsx";
@@ -19,29 +18,17 @@ export interface LeagueGroup {
 
 export function MatchesBoard({
   groups,
-  tz,
   logos,
   nextDay,
   nextDayLabel,
-  hasLive,
 }: {
   groups: LeagueGroup[];
-  tz: string;
   logos: Record<string, string>;
   nextDay?: string;
   nextDayLabel?: string;
-  hasLive: boolean;
 }) {
   const { following } = useFavorites();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const router = useRouter();
-
-  // While anything is live, refresh server data every 30s (ESPN overlay revalidates at 30s).
-  useEffect(() => {
-    if (!hasLive) return;
-    const id = setInterval(() => router.refresh(), 30_000);
-    return () => clearInterval(id);
-  }, [hasLive, router]);
 
   const all = groups.flatMap((g) => g.matches);
   const pinned = all.filter((m) => following.includes(m.home) || following.includes(m.away));
@@ -88,7 +75,7 @@ export function MatchesBoard({
               </div>
               <div className="px-2 pb-2">
                 {pinned.map((m, i) => (
-                  <MatchRow key={m.id} m={m} tz={tz} index={i} logos={logos} />
+                  <MatchRow key={m.id} m={m} index={i} logos={logos} />
                 ))}
               </div>
             </Panel>
@@ -130,7 +117,7 @@ export function MatchesBoard({
                 >
                   <div className="px-2 pb-2">
                     {g.matches.map((m, i) => (
-                      <MatchRow key={m.id} m={m} tz={tz} index={i} logos={logos} />
+                      <MatchRow key={m.id} m={m} index={i} logos={logos} />
                     ))}
                   </div>
                 </motion.div>
