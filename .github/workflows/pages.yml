@@ -22,13 +22,15 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       NEXT_TELEMETRY_DISABLED: "1"
+      # Project sites live under /<repo>/; a <owner>.github.io repo is served at the root.
+      BASE_PATH: ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner) && '' || format('/{0}', github.event.repository.name) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -42,22 +44,23 @@ jobs:
       - name: Typecheck & server build
         run: npm run build
 
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
       - name: Static export
         env:
           STATIC_EXPORT: "1"
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: |
           rm -rf .next out
           npm run build
           touch out/.nojekyll
           echo "Exported $(find out -name '*.html' | wc -l) pages"
           grep -o '"sources":\[[^]]*\]' out/data/2026-27/epl.json | head -1
+
+      - name: Install browser for e2e
+        run: |
+          npm i --no-save playwright@1
+          npx playwright install --with-deps chromium
+
+      - name: E2E bug bash (interactions + crawl of every page)
+        run: npm run e2e
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -72,6 +75,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4

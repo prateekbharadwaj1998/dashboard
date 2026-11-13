@@ -246,7 +246,7 @@ export function RaceChart({ rounds, series, initialSelected, zones, height = 340
                 return (
                   <motion.g key={l.team} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 + i * 0.06 }}>
                     <motion.circle
-                      initial={{ r: 0 }}
+                      initial={{ r: 0, cx: x(n - 1), cy: y(s, n - 1) }}
                       animate={{ r: 4, cx: x(n - 1), cy: y(s, n - 1) }}
                       transition={{ type: "spring", stiffness: 500, damping: 25, cx: { duration: 0.6 }, cy: { duration: 0.6, ease: [0.65, 0, 0.35, 1] } }}
                       fill={l.color}

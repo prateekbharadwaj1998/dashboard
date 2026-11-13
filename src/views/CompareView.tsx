@@ -64,16 +64,18 @@ export function CompareView({ season }: { season: SeasonId }) {
       </div>
 
       <Panel>
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 py-2 sm:gap-4">
           {[A, B].map((S, i) => (
-            <div key={i} className={`flex items-center gap-4 ${i ? "order-3 flex-row-reverse text-right" : ""}`}>
-              <Crest slug={S.row.team} size={56} logo={S.ls.logos[S.row.team]} />
+            <div key={i} className={`flex min-w-0 items-center gap-4 ${i ? "order-3 flex-row-reverse text-right" : ""}`}>
+              <span className="hidden sm:block">
+                <Crest slug={S.row.team} size={56} logo={S.ls.logos[S.row.team]} />
+              </span>
               <div className="min-w-0">
                 <div className="truncate text-lg font-semibold">{teamBySlug(S.row.team)?.short}</div>
                 <div className="tnum text-sm text-fg-3">
                   #{S.row.pos} · {S.row.pts} pts · {S.row.p} GP
                 </div>
-                <div className={`mt-2 flex ${i ? "justify-end" : ""}`}>
+                <div className={`mt-2 hidden sm:flex ${i ? "justify-end" : ""}`}>
                   <FormStrip form={S.row.form} size={18} />
                 </div>
               </div>

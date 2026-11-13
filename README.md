@@ -13,7 +13,17 @@ npm run build && npm start
 npm run verify     # data-layer checks against the real data
 npm run snapshot   # refresh the bundled data snapshot
 BASE_PATH=/dashboard npm run build:static   # static export to ./out (what GitHub Pages serves)
+BASE_PATH=/dashboard npm run e2e            # bug-bash suite against ./out, served like Pages
 ```
+
+## Tests
+
+`npm run e2e` serves the static export under its base path, exactly as GitHub Pages does, and runs two suites:
+
+- **Interactions** (`e2e/interact.cjs`): table filters and re-ranking, the race chart (switching modes, adding a line), ⌘K, `g` shortcuts, theme persistence, following a team, date and matchday keyboard navigation, the Compare picker, results matrix → match → back, switching seasons and going back, the 404 page, and the mobile drawer.
+- **Crawl** (`e2e/crawl.cjs`): loads every exported page at desktop, mobile and tablet sizes. A page fails on a runtime error, a console error, a failed request, horizontal overflow, an empty page, a page still loading, or `NaN`/`undefined` in visible text.
+
+The Pages workflow runs `verify`, both builds and the e2e suite on every push and every hourly rebuild. A failing check blocks the deploy.
 
 ## Live preview (GitHub Pages)
 
