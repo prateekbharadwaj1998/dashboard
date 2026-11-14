@@ -1,0 +1,34 @@
+name: Data source health check
+
+# Manual check of the live data sources from a clean network: status, size and
+# CORS headers (browsers can only call APIs that send Access-Control-Allow-Origin).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe endpoints
+        run: |
+          probe() {
+            out=$(curl -sS -m 20 -o /dev/null -D - -H "Origin: https://${GITHUB_REPOSITORY_OWNER}.github.io" -w "status=%{http_code} bytes=%{size_download}" "$1" || true)
+            acao=$(echo "$out" | grep -i '^access-control-allow-origin' | tr -d '\r' || true)
+            echo "$(echo "$out" | tail -1)  ${acao:-NO-CORS}  $1"
+          }
+          for u in \
+            "https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?limit=5" \
+            "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard" \
+            "https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event=401879244" \
+            "https://site.api.espn.com/apis/v2/sports/soccer/eng.1/standings" \
+            "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/teams/359/roster" \
+            "https://site.web.api.espn.com/apis/common/v3/sports/soccer/athletes/253989" \
+            "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=soccer" \
+            "https://sports.core.api.espn.com/v2/sports/soccer/leagues?limit=1" \
+            "https://a.espncdn.com/i/teamlogos/soccer/500/359.png" \
+            "https://raw.githubusercontent.com/openfootball/football.json/master/2026-27/en.1.json"; do
+            probe "$u"
+          done
