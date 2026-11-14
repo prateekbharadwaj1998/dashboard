@@ -105,7 +105,7 @@ export function Tabs<T extends string>({
           role="tablist"
           aria-label={label}
           onPointerLeave={() => setHovered(null)}
-          className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto [scrollbar-width:none]"
+          className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {items.map((t) => {
             const active = t.key === value;
@@ -152,7 +152,7 @@ export function Tabs<T extends string>({
                 {active && (
                   <motion.span
                     layoutId="underline"
-                    className="absolute inset-x-2 -bottom-px h-[2px] rounded-full bg-accent"
+                    className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-accent"
                     transition={reduce ? { duration: 0 } : UNDERLINE}
                   />
                 )}

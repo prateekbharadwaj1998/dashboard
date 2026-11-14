@@ -23,6 +23,7 @@ export interface MatchCard {
   status: string; // e.g. "FT", "HT", "67'", "Postponed"
   statusLong: string;
   clock?: string;
+  clockSec?: number; // elapsed seconds at fetch time (live only)
   period?: number;
   completed: boolean;
   home: TeamRef & { score?: number; winner?: boolean; form?: string; shootout?: number };
@@ -49,7 +50,7 @@ export function teamRef(t: Any): TeamRef {
   };
 }
 
-export function statusOf(st: Any): Pick<MatchCard, "state" | "status" | "statusLong" | "clock" | "period" | "completed"> {
+export function statusOf(st: Any): Pick<MatchCard, "state" | "status" | "statusLong" | "clock" | "clockSec" | "period" | "completed"> {
   const type = st?.type ?? {};
   const state: LiveState = type.state === "in" ? "in" : type.state === "post" ? "post" : "pre";
   const name: string = type.name ?? "";
@@ -63,6 +64,7 @@ export function statusOf(st: Any): Pick<MatchCard, "state" | "status" | "statusL
     status,
     statusLong: type.description ?? status,
     clock: st?.displayClock,
+    clockSec: state === "in" ? num(st?.clock) : undefined,
     period: num(st?.period),
     completed: !!type.completed,
   };
