@@ -64,6 +64,11 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: E2E bug bash (interactions + crawl of every page)
+        env:
+          # ESPN's edge refuses headless Chromium from datacenter IPs (real
+          # browsers are fine — see the data health check). The test browser's
+          # ESPN requests are therefore fetched by Node instead.
+          E2E_ROUTE_ESPN: "1"
         run: npm run e2e
 
       - uses: actions/upload-pages-artifact@v3
