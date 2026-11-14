@@ -175,7 +175,7 @@ function PlayerNode({ n, i, inView, onSelect, selected, maxX }: { n: Node; i: nu
         </text>
       )}
       {selected && <circle cx={n.x} cy={n.y} r={R + 0.35} fill="none" stroke="var(--text-primary)" strokeWidth={0.35} />}
-      <text x={n.x} y={n.y + 4.6} textAnchor="middle" fontSize={1.75} fontWeight={500} fill="var(--text-primary)" style={{ paintOrder: "stroke", stroke: "var(--pitch-text-stroke)", strokeWidth: 0.45 }}>
+      <text x={Math.min(maxX - 5.5, Math.max(5.5, n.x))} y={n.y + 4.6} textAnchor="middle" fontSize={1.75} fontWeight={500} fill="var(--text-primary)" style={{ paintOrder: "stroke", stroke: "var(--pitch-text-stroke)", strokeWidth: 0.45 }}>
         {photo && p.jersey ? `${p.jersey} ` : ""}
         {name}
       </text>
