@@ -6,6 +6,8 @@ import type { LineupPlayer, TeamLineup } from "@/lib/espn/normalize";
 import { ratingStyle } from "@/lib/espn/rating";
 import { useSize } from "@/components/charts/core";
 import { onColor } from "./colors";
+import { usePlayerPhoto } from "@/lib/photos";
+import { PlayerPhoto } from "@/components/ui/PlayerPhoto";
 
 // ------------------------------------------------------------ placement
 const DEPTH: [RegExp, number][] = [
@@ -146,6 +148,9 @@ function PlayerNode({ n, i, inView, onSelect, selected, maxX }: { n: Node; i: nu
   const fg = onColor(n.color);
   const name = p.last.length > 11 ? `${p.last.slice(0, 10)}…` : p.last;
   const chipX = n.x + 5.8 > maxX ? n.x - 5.6 : n.x + 1.2; // keep the rating chip inside the pitch
+  const photo = usePlayerPhoto(p.name);
+  const clipId = `pc-${n.side}-${p.id}`;
+  const R = photo ? 2.75 : 2.35;
   return (
     <motion.g
       initial={{ opacity: 0, scale: 0.6 }}
@@ -155,11 +160,23 @@ function PlayerNode({ n, i, inView, onSelect, selected, maxX }: { n: Node; i: nu
       className="cursor-pointer"
       onClick={() => onSelect(p)}
     >
-      <circle cx={n.x} cy={n.y} r={2.35} fill={n.color} stroke={selected ? "var(--text-primary)" : "rgb(255 255 255 / .28)"} strokeWidth={selected ? 0.5 : 0.25} />
-      <text x={n.x} y={n.y} dy="0.36em" textAnchor="middle" fontSize={1.95} fontWeight={700} fill={fg} className="tnum">
-        {p.jersey}
-      </text>
+      <circle cx={n.x} cy={n.y} r={R} fill={n.color} />
+      {photo ? (
+        <>
+          <clipPath id={clipId}>
+            <circle cx={n.x} cy={n.y} r={R - 0.25} />
+          </clipPath>
+          <image href={photo.src} x={n.x - R} y={n.y - R} width={R * 2} height={R * 2.6} preserveAspectRatio="xMidYMin slice" clipPath={`url(#${clipId})`} />
+          <circle cx={n.x} cy={n.y} r={R - 0.12} fill="none" stroke={n.color} strokeWidth={0.32} />
+        </>
+      ) : (
+        <text x={n.x} y={n.y} dy="0.36em" textAnchor="middle" fontSize={1.95} fontWeight={700} fill={fg} className="tnum">
+          {p.jersey}
+        </text>
+      )}
+      {selected && <circle cx={n.x} cy={n.y} r={R + 0.35} fill="none" stroke="var(--text-primary)" strokeWidth={0.35} />}
       <text x={n.x} y={n.y + 4.6} textAnchor="middle" fontSize={1.75} fontWeight={500} fill="var(--text-primary)" style={{ paintOrder: "stroke", stroke: "var(--pitch-text-stroke)", strokeWidth: 0.45 }}>
+        {photo && p.jersey ? `${p.jersey} ` : ""}
         {name}
       </text>
       {r != null && (
@@ -223,9 +240,8 @@ export function BenchList({ lineup, color, onSelect, league }: { lineup: TeamLin
   const [open, setOpen] = useState(false);
   const row = (p: LineupPlayer) => (
     <button key={p.id} onClick={() => onSelect(p)} className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-hover">
-      <span className="tnum inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold" style={{ background: color, color: onColor(color) }}>
-        {p.jersey}
-      </span>
+      <PlayerPhoto name={p.name} size={24} color={color} />
+      <span className="tnum w-5 shrink-0 text-center text-2xs text-fg-4">{p.jersey}</span>
       <span className="min-w-0 flex-1 truncate">{p.name}</span>
       {p.subbedIn != null && <span className="tnum text-2xs text-win">↑ {p.subbedIn}</span>}
       {p.stats.G > 0 && <span className="text-2xs">⚽{p.stats.G > 1 ? `×${p.stats.G}` : ""}</span>}

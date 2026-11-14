@@ -97,6 +97,9 @@ const ok = (name, cond, extra = '') => results.push(`${cond ? 'PASS' : 'FAIL'} $
     await p.waitForSelector('h1:has-text("Haaland")', { timeout: 30000 });
     ok('player bio', (await p.locator('text=Nationality').count()) > 0);
     ok('player game log', (await p.locator('a[href*="match"]').count()) > 3);
+    // Photos are best-effort (Wikimedia rate limits shared CI IPs): a photo, its loading card, or the shirt fallback must show.
+    const portrait = (await p.locator('img[alt="Erling Haaland"]').count()) + (await p.locator('svg[aria-hidden] path[d^="M62 10"]').count()) + (await p.locator('.skeleton').count());
+    ok('player portrait or shirt fallback', portrait > 0);
   });
 
   await step('studio + overlays', async () => {

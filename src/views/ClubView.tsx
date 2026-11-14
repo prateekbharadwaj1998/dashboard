@@ -13,6 +13,9 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { Panel } from "@/components/ui/Panel";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { MiniTable } from "./MatchCentre";
+import { PlayerPhoto } from "@/components/ui/PlayerPhoto";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
+import { yearOf } from "@/lib/photos";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -25,6 +28,7 @@ export interface SquadPlayer {
   pos: string;
   group: "Goalkeepers" | "Defenders" | "Midfielders" | "Forwards" | "Other";
   age?: number;
+  year?: number;
   nationality?: string;
   flag?: string;
   height?: string;
@@ -50,6 +54,7 @@ function squadFrom(roster: any): SquadPlayer[] {
       pos: a.position?.abbreviation ?? "",
       group,
       age: a.age,
+      year: yearOf(a.dateOfBirth),
       nationality: a.citizenship,
       flag: a.flag?.href,
       height: a.displayHeight,
@@ -70,22 +75,8 @@ function scheduleMatches(js: any): MatchCard[] {
     .filter(Boolean) as MatchCard[];
 }
 
-function Avatar({ name, flag, color }: { name: string; flag?: string; color?: string }) {
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("");
-  return (
-    <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-fg" style={{ background: `linear-gradient(145deg, color-mix(in oklab, ${color ?? "#5e6ad2"} 45%, var(--bg-elevated)), var(--bg-elevated))` }}>
-      {initials}
-      {flag && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={`https://a.espncdn.com/combiner/i?img=${new URL(flag).pathname}&w=40&h=40`} alt="" className="absolute -right-1 -bottom-1 h-3.5 w-3.5 rounded-full object-cover ring-2 ring-[var(--bg-panel)]" loading="lazy" />
-      )}
-    </span>
-  );
+function Avatar({ name, flag, color, year }: { name: string; flag?: string; color?: string; year?: number }) {
+  return <PlayerPhoto name={name} year={year} flag={flag} color={color} size={36} />;
 }
 
 function Squad({ players, league, color }: { players: SquadPlayer[]; league: string; color?: string }) {
@@ -98,7 +89,7 @@ function Squad({ players, league, color }: { players: SquadPlayer[]; league: str
   const row = (p: SquadPlayer, i: number) => (
     <motion.li key={p.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 12) * 0.02 }}>
       <Link href={`/player?id=${p.id}&lg=${league}`} className="grid grid-cols-[36px_1fr_44px_44px_44px_44px] items-center gap-2 rounded-md px-2 py-1.5 hover:bg-hover sm:grid-cols-[36px_1fr_120px_44px_44px_44px_44px]">
-        <Avatar name={p.name} flag={p.flag} color={color} />
+        <Avatar name={p.name} flag={p.flag} color={color} year={p.year} />
         <span className="min-w-0">
           <span className="block truncate text-sm">
             {p.name} {p.injured && <span className="text-2xs text-loss" title="Injured">✚</span>}
@@ -161,7 +152,7 @@ function Squad({ players, league, color }: { players: SquadPlayer[]; league: str
           </Panel>
         ))
       )}
-      <p className="text-2xs text-fg-4">Season stats are for this competition. ESPN does not publish player photos, so we show initials with nationality.</p>
+      <p className="text-2xs text-fg-4">Season stats are for this competition. <PhotoCredit /></p>
     </div>
   );
 }
@@ -294,7 +285,7 @@ export function ClubView() {
                 <div className="px-2 pb-2">
                   {[...squad].sort((a, b) => b.goals - a.goals || b.assists - a.assists).slice(0, 5).map((p) => (
                     <Link key={p.id} href={`/player?id=${p.id}&lg=${lg}`} className="flex h-10 items-center gap-2.5 rounded-md px-2 hover:bg-hover">
-                      <Avatar name={p.name} flag={p.flag} color={team.color} />
+                      <Avatar name={p.name} flag={p.flag} color={team.color} year={p.year} />
                       <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
                       <span className="tnum text-sm font-semibold">{p.goals}</span>
                       <span className="tnum w-8 text-right text-2xs text-fg-4">{p.assists} A</span>

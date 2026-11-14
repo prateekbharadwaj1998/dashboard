@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { WEB, useEspn } from "@/lib/espn/client";
 import { compLabel } from "@/lib/espn/competitions";
@@ -12,6 +12,8 @@ import { Panel } from "@/components/ui/Panel";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { CountUp } from "@/components/ui/CountUp";
 import { onColor } from "@/components/matchcentre/colors";
+import { usePlayerPhoto, yearOf } from "@/lib/photos";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -44,6 +46,44 @@ function Shirt({ name, number, color }: { name: string; number?: string; color: 
         {number ?? ""}
       </text>
     </motion.svg>
+  );
+}
+
+/** Real photo (Wikimedia) as a portrait card; the team-colour shirt when none exists. */
+function Portrait({ name, year, number, color }: { name: string; year?: number; number?: string; color: string }) {
+  const photo = usePlayerPhoto(name, year);
+  const [ok, setOk] = useState(false);
+  if (photo === null) return <Shirt name={name} number={number} color={color} />;
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 220, damping: 24 }}
+        className="relative h-[220px] w-[176px] overflow-hidden rounded-2xl shadow-elevated"
+        style={{ background: `linear-gradient(160deg, color-mix(in oklab, ${color} 55%, var(--bg-elevated)), var(--bg-elevated))` }}
+      >
+        {!ok && <span className="skeleton absolute inset-0 !rounded-2xl" />}
+        {photo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photo.src}
+            alt={name}
+            referrerPolicy="no-referrer"
+            onLoad={() => setOk(true)}
+            className={clsx("h-full w-full object-cover object-[50%_15%] transition-opacity duration-500", ok ? "opacity-100" : "opacity-0")}
+          />
+        )}
+        {number && (
+          <span className="tnum absolute right-2 bottom-2 rounded-md px-1.5 py-0.5 text-sm font-bold" style={{ background: color, color: onColor(color) }}>
+            {number}
+          </span>
+        )}
+      </motion.div>
+      <span className="text-[10px] text-fg-4">
+        <PhotoCredit photo={photo} />
+      </span>
+    </div>
   );
 }
 
@@ -145,7 +185,7 @@ export function PlayerView() {
               ))}
             </div>
           </div>
-          <Shirt name={a.displayName} number={a.jersey} color={color} />
+          <Portrait name={a.displayName} year={yearOf(a.dateOfBirth ?? a.displayDOB)} number={a.jersey} color={color} />
         </div>
         <div className="relative mt-5 grid grid-cols-4 gap-4 border-t pt-4">
           {[

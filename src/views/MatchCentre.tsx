@@ -21,6 +21,8 @@ import { StatBars } from "@/components/matchcentre/StatBars";
 import { RatingChip } from "@/components/matchcentre/RatingChip";
 import { sideColors } from "@/components/matchcentre/colors";
 import { ratingStyle } from "@/lib/espn/rating";
+import { PlayerPhoto } from "@/components/ui/PlayerPhoto";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 
 type Tab = "overview" | "lineups" | "stats" | "commentary" | "table" | "h2h";
 
@@ -167,10 +169,15 @@ function PlayerSheet({ p, onClose, league, teamName }: { p: LineupPlayer | null;
             <button onClick={onClose} className="absolute top-3 right-3 rounded-md p-1 text-fg-3 hover:bg-hover" aria-label="Close">
               <X size={16} />
             </button>
-            <div className="text-2xs text-fg-4">{teamName} · {p.posName || p.pos}</div>
-            <div className="mt-1 flex items-center gap-3">
-              <span className="display text-[22px] leading-7">{p.name}</span>
-              <RatingChip r={p.rating} motm={p.motm} size="md" />
+            <div className="flex items-center gap-4">
+              <PlayerPhoto name={p.name} size={72} rounded="xl" />
+              <div className="min-w-0">
+                <div className="text-2xs text-fg-4">{teamName} · {p.posName || p.pos}</div>
+                <div className="mt-0.5 text-[20px] leading-7 font-semibold tracking-[-0.015em]">{p.name}</div>
+                <div className="mt-1">
+                  <RatingChip r={p.rating} motm={p.motm} size="md" />
+                </div>
+              </div>
             </div>
             <div className="mt-1 text-xs text-fg-3">
               #{p.jersey} · {p.minutes}&apos; played
@@ -329,8 +336,9 @@ export function MatchCentre({ id }: { id: string }) {
                     <div className="px-2 pb-2">
                       {topRated.map(({ p, l }) => (
                         <button key={p.id} onClick={() => setSelected(p)} className="flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-left hover:bg-hover">
-                          <TeamLogo src={l.team.logo} abbr={l.team.abbr} size={18} />
+                          <PlayerPhoto name={p.name} size={30} />
                           <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
+                          <TeamLogo src={l.team.logo} abbr={l.team.abbr} size={16} />
                           <span className="text-2xs text-fg-4">{p.pos}</span>
                           <RatingChip r={p.rating} motm={p.motm} />
                         </button>
@@ -386,7 +394,7 @@ export function MatchCentre({ id }: { id: string }) {
                     </span>
                   </span>
                 }
-                subtitle="Tap a player for stats and the rating breakdown"
+                subtitle={<>Tap a player for stats and the rating breakdown · <PhotoCredit /></>}
               >
                 <Pitch lineups={d.lineups} colors={colors} onSelect={setSelected} selectedId={selected?.id} />
               </Panel>

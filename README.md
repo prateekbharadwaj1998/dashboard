@@ -16,6 +16,9 @@ It shows real-time scores, line-ups on a pitch, player ratings, squads and playe
 - **Glance mode (`B`).** A plain spreadsheet-style score list for work. The tab title carries the live score.
 - **HS Rating (beta).** Our own transparent 0–10 rating built from public match stats. Tap any player to see the line-by-line breakdown. It is not an official rating.
 - **Pulse.** A momentum chart built from live commentary: shots, corners and set pieces. It is honestly labelled "Not xG".
+- **Real player photos.** Freely licensed photos from Wikipedia and Wikimedia Commons, credited on every page that shows them. They appear in line-ups on the pitch, player profiles, squads and top-scorer lists.
+  - **Matching:** a page only counts if it describes a footballer, and the birth year must match whenever we know it. Retired namesakes are rejected, so the wrong person is never shown.
+  - **Fallback:** players with no free photo show initials. ESPN publishes no football headshots.
 - **Goal alerts.** Opt-in browser notifications while the tab is open, filtered to the teams you follow.
 
 ## Screens

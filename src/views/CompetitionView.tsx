@@ -14,6 +14,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { Panel } from "@/components/ui/Panel";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { MiniTable } from "./MatchCentre";
+import { PlayerPhoto } from "@/components/ui/PlayerPhoto";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 type Tab = "matches" | "table" | "stats";
@@ -126,8 +127,9 @@ function Leaders({ slug }: { slug: string }) {
                       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: i * 0.03 }}
                     />
                     <span className="tnum relative w-5 text-xs text-fg-4">{i + 1}</span>
-                    {team.logos?.[0]?.href || team.logo ? <TeamLogo src={team.logos?.[0]?.href ?? team.logo} abbr={team.abbreviation} size={18} /> : null}
+                    <PlayerPhoto name={a.displayName} size={28} className="relative" />
                     <span className="relative min-w-0 flex-1 truncate text-sm">{a.displayName}</span>
+                    {team.logos?.[0]?.href || team.logo ? <TeamLogo src={team.logos?.[0]?.href ?? team.logo} abbr={team.abbreviation} size={16} className="relative" /> : null}
                     <span className="relative text-2xs text-fg-4">{(l.shortDisplayValue ?? "").split(":")[0]?.replace("M", "")} apps</span>
                     <span className="tnum relative w-8 text-right font-semibold">{l.value}</span>
                   </Link>
