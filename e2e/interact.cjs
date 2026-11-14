@@ -61,7 +61,13 @@ const ok = (name, cond, extra = '') => results.push(`${cond ? 'PASS' : 'FAIL'} $
     await go(`/match/?id=${MATCH}`);
     await p.waitForSelector('text=Brighton', { timeout: 30000 });
     ok('match hero renders', (await p.locator('text=Full Time').count()) > 0);
-    ok('timeline + pulse render', (await p.locator('text=Timeline').count()) === 1 && (await p.locator('text=Pulse').count()) >= 1);
+    ok('key events + momentum + top stats render', (await p.locator('text=Key events').count()) === 1 && (await p.locator('[aria-label^="Match momentum"]').count()) === 1 && (await p.locator('text=Ball possession').count()) === 1);
+    ok('stakes line', (await p.locator('text=/on \\d+ pts/').count()) > 0);
+    const mom = p.locator('[aria-label^="Match momentum"]');
+    const bb = await mom.boundingBox();
+    await p.mouse.move(bb.x + bb.width * 0.3, bb.y + bb.height / 2);
+    await p.waitForTimeout(300);
+    ok('momentum hover shows minute readout', (await p.locator('text=/^\\d+\'$/').count()) > 0);
     await p.click('[role=tab]:has-text("Line-ups")');
     await p.waitForTimeout(1200);
     ok('tab synced to URL', /tab=lineups/.test(path()), path());

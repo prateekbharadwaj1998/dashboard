@@ -105,7 +105,7 @@ export function Tabs<T extends string>({
           role="tablist"
           aria-label={label}
           onPointerLeave={() => setHovered(null)}
-          className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto overflow-y-hidden [mask-image:linear-gradient(90deg,#000_88%,transparent)] [scrollbar-width:none] sm:[mask-image:none] [&::-webkit-scrollbar]:hidden"
         >
           {items.map((t) => {
             const active = t.key === value;

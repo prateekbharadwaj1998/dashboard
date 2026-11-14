@@ -16,7 +16,7 @@ export function PhotoCredit({ photo }: { photo?: Photo | null }) {
       <a href="https://commons.wikimedia.org/" target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">
         Wikimedia Commons
       </a>{" "}
-      (free licences); initials where no photo exists.
+      (free licences); a silhouette where no free photo exists.
     </span>
   );
 }

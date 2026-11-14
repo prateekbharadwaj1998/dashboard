@@ -6,7 +6,7 @@ import type { LineupPlayer, TeamLineup } from "@/lib/espn/normalize";
 import { ratingStyle } from "@/lib/espn/rating";
 import { useSize } from "@/components/charts/core";
 import { onColor } from "./colors";
-import { usePlayerPhoto } from "@/lib/photos";
+import { usePhotoCoverage, usePlayerPhoto } from "@/lib/photos";
 import { PlayerPhoto } from "@/components/ui/PlayerPhoto";
 
 // ------------------------------------------------------------ placement
@@ -140,7 +140,7 @@ function PitchLines({ vertical }: { vertical: boolean }) {
   );
 }
 
-function PlayerNode({ n, i, inView, onSelect, selected, maxX }: { n: Node; i: number; inView: boolean; onSelect: (p: LineupPlayer) => void; selected: boolean; maxX: number }) {
+function PlayerNode({ n, i, inView, onSelect, selected, maxX, photos }: { n: Node; i: number; inView: boolean; onSelect: (p: LineupPlayer) => void; selected: boolean; maxX: number; photos: boolean }) {
   const p = n.p;
   const goals = p.stats.G;
   const r = p.rating;
@@ -148,9 +148,11 @@ function PlayerNode({ n, i, inView, onSelect, selected, maxX }: { n: Node; i: nu
   const fg = onColor(n.color);
   const name = p.last.length > 11 ? `${p.last.slice(0, 10)}…` : p.last;
   const chipX = n.x + 5.8 > maxX ? n.x - 5.6 : n.x + 1.2; // keep the rating chip inside the pitch
-  const photo = usePlayerPhoto(p.name);
+  const looked = usePlayerPhoto(photos ? p.name : undefined);
+  const photo = photos ? looked : null;
   const clipId = `pc-${n.side}-${p.id}`;
-  const R = photo ? 2.75 : 2.35;
+  const R = 2.35; // constant node size — never flips between photo / number
+  const zoom = photo?.portrait === false ? 1.6 : 1.25;
   return (
     <motion.g
       initial={{ opacity: 0, scale: 0.6 }}
@@ -160,23 +162,43 @@ function PlayerNode({ n, i, inView, onSelect, selected, maxX }: { n: Node; i: nu
       className="cursor-pointer"
       onClick={() => onSelect(p)}
     >
-      <circle cx={n.x} cy={n.y} r={R} fill={n.color} />
+      <circle cx={n.x} cy={n.y} r={R} fill={photo || photos ? `color-mix(in oklab, ${n.color} 28%, var(--bg-elevated))` : n.color} />
       {photo ? (
         <>
           <clipPath id={clipId}>
-            <circle cx={n.x} cy={n.y} r={R - 0.25} />
+            <circle cx={n.x} cy={n.y} r={R - 0.1} />
           </clipPath>
-          <image href={photo.src} x={n.x - R} y={n.y - R} width={R * 2} height={R * 2.6} preserveAspectRatio="xMidYMin slice" clipPath={`url(#${clipId})`} />
-          <circle cx={n.x} cy={n.y} r={R - 0.12} fill="none" stroke={n.color} strokeWidth={0.32} />
+          <g clipPath={`url(#${clipId})`}>
+            <image
+              href={photo.src}
+              x={n.x - R * zoom}
+              y={n.y - R - R * (zoom - 1) * 0.35}
+              width={R * 2 * zoom}
+              height={R * 2 * zoom}
+              preserveAspectRatio="xMidYMin slice"
+              style={{ filter: "grayscale(1) contrast(1.08) brightness(1.04)" }}
+            />
+            <circle cx={n.x} cy={n.y} r={R} fill={n.color} style={{ mixBlendMode: "soft-light" }} opacity={0.45} />
+          </g>
         </>
+      ) : photos ? (
+        // photo set chosen but this player has none: silhouette on the same disc
+        <g clipPath={`url(#${clipId})`} opacity={0.55}>
+          <clipPath id={clipId}>
+            <circle cx={n.x} cy={n.y} r={R - 0.1} />
+          </clipPath>
+          <circle cx={n.x} cy={n.y - 0.45} r={0.85} fill="var(--text-quaternary)" />
+          <path d={`M ${n.x - 1.8} ${n.y + R} c 0 -1.5 0.8 -2.4 1.8 -2.4 s 1.8 0.9 1.8 2.4 z`} fill="var(--text-quaternary)" />
+        </g>
       ) : (
         <text x={n.x} y={n.y} dy="0.36em" textAnchor="middle" fontSize={1.95} fontWeight={700} fill={fg} className="tnum">
           {p.jersey}
         </text>
       )}
+      <circle cx={n.x} cy={n.y} r={R - 0.08} fill="none" stroke={n.color} strokeWidth={photo || photos ? 0.32 : 0.18} strokeOpacity={photo || photos ? 0.9 : 0.4} />
       {selected && <circle cx={n.x} cy={n.y} r={R + 0.35} fill="none" stroke="var(--text-primary)" strokeWidth={0.35} />}
       <text x={Math.min(maxX - 5.5, Math.max(5.5, n.x))} y={n.y + 4.6} textAnchor="middle" fontSize={1.75} fontWeight={500} fill="var(--text-primary)" style={{ paintOrder: "stroke", stroke: "var(--pitch-text-stroke)", strokeWidth: 0.45 }}>
-        {photo && p.jersey ? `${p.jersey} ` : ""}
+        {photos && p.jersey ? `${p.jersey} ` : ""}
         {name}
       </text>
       {r != null && (
@@ -218,6 +240,9 @@ export function Pitch({ lineups, colors, onSelect, selectedId }: { lineups: Team
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.2 });
   const nodes = useMemo(() => layout(lineups, colors, vertical), [lineups, colors, vertical]);
+  const starters = useMemo(() => lineups.flatMap((l) => l.starters.map((p) => p.name)), [lineups]);
+  // Photos only when ≥70% of starters have one — otherwise uniform shirt numbers.
+  const photos = usePhotoCoverage(starters) === true;
   const vb = vertical ? "0 0 68 105" : "0 0 105 68";
   return (
     <div ref={wrapRef}>
@@ -225,7 +250,7 @@ export function Pitch({ lineups, colors, onSelect, selectedId }: { lineups: Team
         <svg viewBox={vb} className="absolute inset-0 h-full w-full select-none" role="img" aria-label="Starting line-ups on the pitch">
           <PitchLines vertical={vertical} />
           {nodes.map((n, i) => (
-            <PlayerNode key={`${n.side}-${n.p.id}-${i}`} n={n} i={i} inView={inView} onSelect={onSelect} selected={selectedId === n.p.id} maxX={vertical ? 68 : 105} />
+            <PlayerNode key={`${n.side}-${n.p.id}-${i}`} n={n} i={i} inView={inView} onSelect={onSelect} selected={selectedId === n.p.id} maxX={vertical ? 68 : 105} photos={photos} />
           ))}
         </svg>
       </div>

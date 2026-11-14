@@ -12,6 +12,7 @@ export interface TeamRef {
   abbr: string;
   logo?: string;
   color?: string;
+  alt?: string; // alternate kit colour
 }
 
 export interface MatchCard {
@@ -47,6 +48,7 @@ export function teamRef(t: Any): TeamRef {
     abbr: t?.abbreviation ?? (t?.displayName ?? "").slice(0, 3).toUpperCase(),
     logo,
     color: t?.color ? `#${String(t.color).replace("#", "")}` : undefined,
+    alt: t?.alternateColor ? `#${String(t.alternateColor).replace("#", "")}` : undefined,
   };
 }
 
@@ -260,7 +262,7 @@ export interface MatchDetail {
   city?: string;
   attendance?: number;
   referee?: string;
-  form: { side: "home" | "away"; games: { id: string; date: string; result?: string; score: string; opponent: string; opponentLogo?: string; atVs?: string }[] }[];
+  form: { side: "home" | "away"; games: { id: string; date: string; result?: string; score: string; opponent: string; opponentLogo?: string; atVs?: string; teamHome: boolean; hs?: number; as?: number }[] }[];
   h2h: { id: string; date: string; home: string; away: string; score: string; leagueName?: string }[];
   minute: number; // current/last minute for timelines
 }
@@ -470,6 +472,9 @@ export function matchDetail(js: Any, slugHint: string): MatchDetail | null {
       opponent: g.opponent?.displayName ?? g.opponent?.abbreviation ?? "",
       opponentLogo: g.opponentLogo ?? g.opponent?.logo,
       atVs: g.atVs,
+      teamHome: g.homeTeamId != null ? String(g.homeTeamId) === String(f.team?.id) : g.atVs !== "@",
+      hs: num(g.homeTeamScore),
+      as: num(g.awayTeamScore),
     })),
   }));
   const h2h: MatchDetail["h2h"] = [];

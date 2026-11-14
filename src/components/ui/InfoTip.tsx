@@ -9,6 +9,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
  */
 export function InfoTip({ children, label, onceKey }: { children: ReactNode; label: string; onceKey?: string }) {
   const [open, setOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
   const id = useId();
   useEffect(() => {
@@ -25,6 +26,9 @@ export function InfoTip({ children, label, onceKey }: { children: ReactNode; lab
   }, [onceKey]);
   useEffect(() => {
     if (!open) return;
+    // flip to the side with room so the popover never overflows the viewport
+    const r = ref.current?.getBoundingClientRect();
+    if (r) setAlignRight(r.left + Math.min(300, window.innerWidth * 0.8) > window.innerWidth - 8);
     const close = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("pointerdown", close);
@@ -59,7 +63,7 @@ export function InfoTip({ children, label, onceKey }: { children: ReactNode; lab
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, transition: { duration: 0.1 } }}
             transition={{ type: "spring", stiffness: 420, damping: 32 }}
-            className="absolute top-full left-0 z-40 mt-2 w-[min(300px,80vw)] rounded-xl bg-elevated p-3 text-xs leading-5 font-normal text-fg-2 shadow-modal"
+            className={`absolute top-full ${alignRight ? "right-0" : "left-0"} z-40 mt-2 w-[min(300px,80vw)] rounded-xl bg-elevated p-3 text-xs leading-5 font-normal text-fg-2 shadow-modal`}
           >
             {children}
           </motion.span>

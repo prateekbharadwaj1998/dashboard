@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapPin, Users, Whistle, X, Tv } from "lucide-react";
+import { Star, X } from "lucide-react";
 import clsx from "clsx";
 import { SITE, useEspn } from "@/lib/espn/client";
 import { matchDetail, type LineupPlayer, type MatchDetail } from "@/lib/espn/normalize";
@@ -18,7 +18,7 @@ import { LiveClock } from "@/components/live/LiveClock";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { Pitch, BenchList } from "@/components/matchcentre/Pitch";
 import { Timeline } from "@/components/matchcentre/Timeline";
-import { Pulse } from "@/components/matchcentre/Pulse";
+import { Overview, stakesLine } from "@/components/matchcentre/Overview";
 import { StatBars } from "@/components/matchcentre/StatBars";
 import { RatingChip } from "@/components/matchcentre/RatingChip";
 import { sideColors } from "@/components/matchcentre/colors";
@@ -38,9 +38,12 @@ function FollowTeam({ id, name, logo, league }: { id: string; name: string; logo
         e.preventDefault();
         f.toggle({ id, name, logo, league });
       }}
-      className={clsx("rounded-full px-2 py-0.5 text-2xs font-medium shadow-ring transition-colors", on ? "bg-accent-soft text-accent-text" : "text-fg-3 hover:text-fg")}
+      aria-pressed={on}
+      aria-label={on ? `Unfollow ${name}` : `Follow ${name}`}
+      title={on ? `Following ${name}` : `Follow ${name} — pin to your sidebar`}
+      className={clsx("inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-colors", on ? "text-draw" : "text-fg-4 hover:bg-hover hover:text-fg-2")}
     >
-      {on ? "★ Following" : "☆ Follow"}
+      <Star size={14} fill={on ? "currentColor" : "none"} />
     </button>
   );
 }
@@ -62,43 +65,45 @@ function StartsIn({ iso }: { iso: string }) {
   return <>{rel}</>;
 }
 
-function Hero({ d, fetchedAt }: { d: MatchDetail; fetchedAt?: number }) {
+function Hero({ d, fetchedAt, colors, heroRef }: { d: MatchDetail; fetchedAt?: number; colors: [string, string]; heroRef: React.RefObject<HTMLDivElement | null> }) {
   const m = d.card;
-  const [hc, ac] = sideColors(m.home.color, m.away.color);
-  const scorers = (side: "home" | "away") =>
-    d.events.filter((e) => e.side === side && /goal|penalty$/.test(e.kind) && e.kind !== "penalty-miss");
-  const reds = (side: "home" | "away") => d.events.filter((e) => e.side === side && e.kind === "red");
-  const side = (s: "home" | "away") => {
+  const [hc, ac] = colors;
+  const live = m.state === "in";
+  const stakes = stakesLine(d);
+  const lines = (side: "home" | "away") =>
+    d.events.filter((e) => e.side === side && ((/goal|penalty$/.test(e.kind) && e.kind !== "penalty-miss") || e.kind === "red"));
+  const team = (s: "home" | "away") => {
     const t = m[s];
+    const right = s === "away";
     return (
-      <div className={clsx("flex min-w-0 flex-1 flex-col items-center gap-2 text-center")}>
-        <Link href={`/team?id=${t.id}&lg=${d.leagueSlug}`} className="group flex flex-col items-center gap-2.5">
-          <motion.span initial={{ opacity: 0, scale: 0.85, x: s === "home" ? -16 : 16 }} animate={{ opacity: 1, scale: 1, x: 0 }} transition={{ type: "spring", stiffness: 260, damping: 26 }}>
-            <TeamLogo src={t.logo} abbr={t.abbr} color={t.color} size={72} className="transition-transform duration-300 group-hover:-translate-y-0.5" />
+      <div className={clsx("flex min-w-0 flex-1 flex-col items-center gap-2 md:gap-4", right ? "md:flex-row" : "md:flex-row-reverse")}>
+        <Link href={`/team?id=${t.id}&lg=${d.leagueSlug}`} className="group shrink-0">
+          <motion.span className="block" initial={{ opacity: 0, scale: 0.85, x: right ? 16 : -16 }} animate={{ opacity: 1, scale: 1, x: 0 }} transition={{ type: "spring", stiffness: 260, damping: 26 }}>
+            <TeamLogo src={t.logo} abbr={t.abbr} color={t.color} size={56} className="transition-transform duration-300 group-hover:-translate-y-0.5" />
           </motion.span>
-          <span className="max-w-full truncate text-base font-semibold md:text-lg">{t.short}</span>
         </Link>
-        <FollowTeam id={t.id} name={t.name} logo={t.logo} league={d.leagueSlug} />
-        <ul className="space-y-0.5 text-xs text-fg-3">
-          {scorers(s).map((e) => (
-            <li key={e.id} className="tnum">
-              {e.player?.split(" ").slice(-1)[0]} {e.minute}
-              {e.kind === "penalty" ? " (P)" : e.kind === "own-goal" ? " (OG)" : ""}
-            </li>
-          ))}
-          {reds(s).map((e) => (
-            <li key={e.id} className="tnum text-loss">
-              <span className="mr-1 inline-block h-2.5 w-[7px] rounded-[1.5px] bg-[#E5484D] align-[-1px]" />
-              {e.player?.split(" ").slice(-1)[0]} {e.minute}
-            </li>
-          ))}
-        </ul>
+        <div className={clsx("w-full min-w-0 flex-1 text-center", right ? "md:text-left" : "md:text-right")}>
+          <div className={clsx("flex items-center justify-center gap-1", right ? "md:justify-start" : "md:justify-end")}>
+            {right && <Link href={`/team?id=${t.id}&lg=${d.leagueSlug}`} className="truncate text-base font-semibold hover:underline md:text-[22px]">{t.short}</Link>}
+            <FollowTeam id={t.id} name={t.short} logo={t.logo} league={d.leagueSlug} />
+            {!right && <Link href={`/team?id=${t.id}&lg=${d.leagueSlug}`} className="truncate text-base font-semibold hover:underline md:text-[22px]">{t.short}</Link>}
+          </div>
+          <ul className="mt-1 space-y-0.5 text-xs text-fg-3">
+            {lines(s).map((e) => (
+              <li key={e.id} className="tnum truncate">
+                {e.kind === "red" ? <span className="mr-1 inline-block h-2.5 w-[7px] rounded-[1.5px] bg-[#E5484D] align-[-1px]" /> : <span className="mr-1">⚽</span>}
+                {e.player?.split(" ").slice(-1)[0]} {e.minute}
+                {e.kind === "penalty" ? " (P)" : e.kind === "own-goal" ? " (OG)" : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     );
   };
-  const live = m.state === "in";
   return (
     <div
+      ref={heroRef}
       className="hero-glow relative -mx-4 mb-4 overflow-hidden px-4 pt-5 pb-6 md:-mx-8 md:rounded-2xl md:px-8"
       style={{ ["--team-glow" as string]: `color-mix(in oklab, ${hc} 20%, transparent)`, ["--glow-x" as string]: "18%" }}
     >
@@ -117,71 +122,83 @@ function Hero({ d, fetchedAt }: { d: MatchDetail; fetchedAt?: number }) {
         <span className="text-fg-4">·</span>
         <LocalTime iso={m.date} opts={{ weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }} />
       </div>
-      <div className="relative mx-auto mt-6 flex max-w-3xl items-start justify-between gap-3">
-        {side("home")}
-        <div className="flex shrink-0 flex-col items-center pt-2">
+      <div className="relative mx-auto mt-5 flex max-w-4xl items-start justify-between gap-2 md:gap-6">
+        {team("home")}
+        <div className="flex shrink-0 flex-col items-center">
           {m.home.score != null && m.away.score != null ? (
-            <div className={clsx("display flex items-center gap-3 text-[52px] leading-[60px] md:text-[64px]", live && "text-fg")}>
+            <div className="display flex items-center gap-2.5 text-[46px] leading-[54px] md:text-[60px] md:leading-[64px]">
               <ScoreRoll value={m.home.score} />
               <span className="text-fg-4">–</span>
               <ScoreRoll value={m.away.score} />
             </div>
           ) : (
-            <div className="display pt-3 text-[28px] text-fg-3">
+            <div className="display pt-2 text-[30px] text-fg-2">
               <LocalTime iso={m.date} opts={{ hour: "2-digit", minute: "2-digit", hour12: false }} />
             </div>
           )}
-          <div className="mt-2 flex flex-col items-center gap-1">
+          <div className="mt-1.5 flex flex-col items-center gap-1">
             {live ? (
               <>
-                <span className="flex items-center gap-2 rounded-full bg-[color-mix(in_oklab,var(--live)_14%,transparent)] px-3 py-1 text-base font-semibold text-live">
+                <span className="flex items-center gap-2 rounded-full bg-[color-mix(in_oklab,var(--live)_14%,transparent)] px-3 py-1 text-[15px] font-semibold text-live">
                   <span className="live-dot" />
                   {m.status === "HT" ? "Half-time" : <LiveClock m={m} fetchedAt={fetchedAt} />}
                 </span>
                 <span className="text-2xs font-medium tracking-wide text-fg-3 uppercase">{phaseLabel(m)}</span>
               </>
             ) : m.state === "pre" ? (
-              /PP|Canc/.test(m.status) ? (
-                <span className="text-xs text-fg-3">{m.statusLong}</span>
-              ) : (
-                <span className="text-xs text-fg-3">
-                  <StartsIn iso={m.date} /> · your time
-                </span>
-              )
+              <span className="text-xs text-fg-3">{/PP|Canc/.test(m.status) ? m.statusLong : <><StartsIn iso={m.date} /> · your time</>}</span>
             ) : (
               <span className="text-xs font-medium text-fg-3">{m.statusLong === "Full Time" ? "Full time" : m.statusLong}</span>
             )}
+            {(m.home.shootout != null || m.away.shootout != null) && (
+              <span className="tnum rounded-md bg-hover px-2 py-0.5 text-xs text-fg-2">
+                Penalties {m.home.shootout ?? 0}–{m.away.shootout ?? 0}
+              </span>
+            )}
           </div>
-          {(m.home.shootout != null || m.away.shootout != null) && (
-            <div className="tnum mt-1 rounded-md bg-hover px-2 py-0.5 text-xs text-fg-2">
-              Penalties {m.home.shootout ?? 0}–{m.away.shootout ?? 0}
-            </div>
-          )}
         </div>
-        {side("away")}
+        {team("away")}
       </div>
-      <div className="relative mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-2xs text-fg-4">
-        {d.venue && (
-          <span className="inline-flex items-center gap-1">
-            <MapPin size={11} /> {d.venue}
-            {d.city ? `, ${d.city}` : ""}
-          </span>
-        )}
-        {d.attendance && (
-          <span className="tnum inline-flex items-center gap-1">
-            <Users size={11} /> {d.attendance.toLocaleString()}
-          </span>
-        )}
-        {d.referee && (
-          <span className="inline-flex items-center gap-1">
-            <Whistle size={11} /> {d.referee}
-          </span>
-        )}
-        <Link href={`/studio?match=${m.id}`} title="Free OBS / browser-source scoreboard for streamers" className="inline-flex items-center gap-1 text-accent-text hover:underline">
-          <Tv size={11} /> Use on your stream ↗
-        </Link>
-      </div>
+      {stakes && <p className="relative mx-auto mt-5 max-w-2xl text-center text-sm text-fg-2">{stakes}</p>}
     </div>
+  );
+}
+
+/** Compact score bar that slides in above the tabs once the hero scrolls away. */
+function CompactScore({ d, fetchedAt, show }: { d: MatchDetail; fetchedAt?: number; show: boolean }) {
+  const m = d.card;
+  return (
+    <AnimatePresence initial={false}>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0, y: -8, height: 0 }}
+          animate={{ opacity: 1, y: 0, height: 44 }}
+          exit={{ opacity: 0, y: -8, height: 0 }}
+          transition={{ duration: 0.16, ease: [0.2, 0, 0, 1] }}
+          className="flex items-center justify-center gap-3 overflow-hidden border-b border-line/60 text-sm"
+        >
+          <TeamLogo src={m.home.logo} abbr={m.home.abbr} size={20} />
+          <span className="font-semibold">{m.home.abbr}</span>
+          <span className="tnum flex items-center gap-1 text-base font-bold">
+            {m.state === "pre" ? (
+              "vs"
+            ) : (
+              <>
+                <ScoreRoll value={m.home.score} />–<ScoreRoll value={m.away.score} />
+              </>
+            )}
+          </span>
+          <span className="font-semibold">{m.away.abbr}</span>
+          <TeamLogo src={m.away.logo} abbr={m.away.abbr} size={20} />
+          {m.state === "in" && (
+            <span className="ml-1 flex items-center gap-1.5 text-xs font-semibold text-live">
+              <span className="live-dot" />
+              {m.status === "HT" ? "HT" : <LiveClock m={m} fetchedAt={fetchedAt} />}
+            </span>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -280,6 +297,10 @@ function PlayerSheet({ p, onClose, league, teamName }: { p: LineupPlayer | null;
 export function MatchCentre({ id }: { id: string }) {
   const [urlTab, setTab] = useUrlTab<Tab>(["overview", "lineups", "stats", "commentary", "table", "h2h"], "overview");
   const sentinel = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [heroGone, setHeroGone] = useState(false);
+  const [dark, setDark] = useState(true);
+  useEffect(() => setDark(document.documentElement.dataset.theme !== "light"), []);
   const [selected, setSelected] = useState<LineupPlayer | null>(null);
   const url = `${SITE}/all/summary?event=${encodeURIComponent(id)}`;
   const [poll, setPoll] = useState<number | undefined>();
@@ -297,10 +318,18 @@ export function MatchCentre({ id }: { id: string }) {
         : `${t.state === "in" ? `${t.status} ` : ""}${t.home.abbr} ${t.home.score}–${t.away.score} ${t.away.abbr} · Halfspace`;
   }, [d]);
 
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setHeroGone(!e.isIntersecting), { rootMargin: "-56px 0px 0px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [d !== null]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (error && !d) return <Panel className="py-10 text-center text-sm text-fg-3">Couldn&apos;t load this match ({error}). Retrying…</Panel>;
   if (!d) return <PageSkeleton />;
 
-  const colors = sideColors(d.card.home.color, d.card.away.color);
+  const colors = sideColors(d.card.home.color, d.card.away.color, d.card.away.alt, dark);
   const hasLineups = d.lineups.some((l) => l.starters.length);
   const tabs: { key: Tab; label: string; show: boolean }[] = [
     { key: "overview", label: "Overview", show: true },
@@ -320,9 +349,10 @@ export function MatchCentre({ id }: { id: string }) {
 
   return (
     <>
-      <Hero d={d} fetchedAt={updatedAt} />
+      <Hero d={d} fetchedAt={updatedAt} colors={colors} heroRef={heroRef} />
       <div ref={sentinel} className="scroll-mt-12" />
-      <div className="sticky top-12 z-20 -mx-4 mb-4 border-b bg-app/90 px-4 md:-mx-8 md:px-8">
+      <div className="sticky top-12 z-20 -mx-4 mb-4 border-b bg-app/85 px-4 backdrop-blur-md md:-mx-8 md:px-8">
+        <CompactScore d={d} fetchedAt={updatedAt} show={heroGone} />
         <Tabs<Tab>
           items={visibleTabs.map((t) => ({ key: t.key, label: t.label }))}
           value={tab}
@@ -338,11 +368,9 @@ export function MatchCentre({ id }: { id: string }) {
           trailing={
             <span className="ml-3 hidden shrink-0 items-center text-2xs text-fg-4 sm:flex" suppressHydrationWarning>
               {d.card.state === "in" ? (
-                <>
-                  <span className="live-dot mr-1.5" /> Live · every 15s
-                </>
-              ) : updatedAt ? (
-                "Up to date"
+                <span className="flex items-center" title={updatedAt ? `Updated ${new Date(updatedAt).toLocaleTimeString()} · refreshes every 15s` : undefined}>
+                  <span className="live-dot mr-1.5" /> Live
+                </span>
               ) : (
                 ""
               )}
@@ -357,80 +385,7 @@ export function MatchCentre({ id }: { id: string }) {
         value={tab}
         render={(k) => (
           <>
-          {k === "overview" && (
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="space-y-4">
-                {d.events.length > 0 && (
-                  <Panel title="Timeline" subtitle={`${d.card.home.short} above · ${d.card.away.short} below`}>
-                    <Timeline events={d.events} minute={d.minute} live={d.card.state === "in"} colors={colors} />
-                  </Panel>
-                )}
-                {d.commentary.length > 0 && (
-                  <Panel title="Pulse" subtitle="Who's on top, minute by minute">
-                    <Pulse commentary={d.commentary} events={d.events} minute={d.minute} colors={colors} live={d.card.state === "in"} />
-                  </Panel>
-                )}
-                {d.stats.length > 0 && (
-                  <Panel title="Key stats">
-                    <StatBars stats={d.stats.filter((s) => ["possessionPct", "totalShots", "shotsOnTarget", "wonCorners", "passPct", "foulsCommitted"].includes(s.key))} colors={colors} />
-                  </Panel>
-                )}
-                {!d.events.length && !d.stats.length && d.card.state === "pre" && (
-                  <Panel className="py-10 text-center">
-                    <p className="text-sm text-fg-2">Kick-off <LocalTime iso={d.card.date} opts={{ weekday: "long", hour: "2-digit", minute: "2-digit", hour12: false }} /></p>
-                    <p className="mt-1 text-xs text-fg-4">Line-ups usually appear about an hour before kick-off. This page updates by itself.</p>
-                  </Panel>
-                )}
-              </div>
-              <div className="space-y-4">
-                {topRated.length > 0 && (
-                  <Panel title="Top rated" subtitle="HS Rating · beta" pad={false}>
-                    <div className="px-2 pb-2">
-                      {topRated.map(({ p, l }) => (
-                        <button key={p.id} onClick={() => setSelected(p)} className="flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-left hover:bg-hover">
-                          <PlayerPhoto name={p.name} size={30} />
-                          <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
-                          <TeamLogo src={l.team.logo} abbr={l.team.abbr} size={16} />
-                          <span className="text-2xs text-fg-4">{p.pos}</span>
-                          <RatingChip r={p.rating} motm={p.motm} />
-                        </button>
-                      ))}
-                    </div>
-                  </Panel>
-                )}
-                {d.form.length > 0 && (
-                  <Panel title="Recent form" pad={false}>
-                    <div className="space-y-3 px-4 pb-4">
-                      {d.form.map((f) => {
-                        const t = d.card[f.side];
-                        return (
-                          <div key={f.side} className="flex items-center gap-2">
-                            <TeamLogo src={t.logo} abbr={t.abbr} size={18} />
-                            <span className="w-24 truncate text-sm">{t.short}</span>
-                            <span className="flex gap-1">
-                              {f.games.slice(0, 5).map((g) => (
-                                <Link
-                                  key={g.id}
-                                  href={`/match?id=${g.id}`}
-                                  title={`${g.atVs ?? ""} ${g.opponent} ${g.score}`}
-                                  className={clsx(
-                                    "inline-flex h-5 w-5 items-center justify-center rounded-[4px] text-[10px] font-semibold text-black/80",
-                                    g.result === "W" ? "bg-win" : g.result === "L" ? "bg-loss" : "bg-draw",
-                                  )}
-                                >
-                                  {g.result ?? "–"}
-                                </Link>
-                              ))}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Panel>
-                )}
-              </div>
-            </div>
-          )}
+          {k === "overview" && <Overview d={d} colors={colors} onTab={(t) => setTab(t)} onSelect={setSelected} />}
 
           {k === "lineups" && (
             <div className="space-y-4">

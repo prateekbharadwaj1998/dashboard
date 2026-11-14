@@ -154,10 +154,12 @@ body {
   font-weight: 600;
 }
 
-/* thin, quiet scrollbars */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
+/* thin, quiet scrollbars (layered so utilities like [scrollbar-width:none] win) */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
 }
 
 /* --------------------------------------------------------------- surfaces */

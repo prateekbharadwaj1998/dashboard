@@ -15,10 +15,11 @@ export interface Photo {
   src: string;
   page: string; // Wikipedia article title (for attribution)
   file?: string; // image file name on Commons/Wikipedia
+  portrait?: boolean; // h ≥ 1.15·w → tighter face crop; otherwise an action/crowd shot
 }
 
 type Entry = { p: Photo | null; t: number };
-const KEY = "halfspace:photos:v1";
+const KEY = "halfspace:photos:v2";
 const HIT_TTL = 14 * 864e5;
 const MISS_TTL = 3 * 864e5;
 const API = "https://en.wikipedia.org/w/api.php";
@@ -117,7 +118,9 @@ async function fetchBatch(items: { key: string; name: string; year?: number }[])
     for (const t of candidates(it.name, it.year)) {
       const p = pages.get(t);
       if (p?.thumbnail?.source && accept(p.description, it.year)) {
-        photo = { src: p.thumbnail.source, page: p.title, file: p.pageimage };
+        const w = Number(p.thumbnail.width) || 1;
+        const h = Number(p.thumbnail.height) || 1;
+        photo = { src: p.thumbnail.source, page: p.title, file: p.pageimage, portrait: h >= 1.15 * w };
         break;
       }
     }
@@ -197,3 +200,39 @@ export const yearOf = (dob?: string) => {
 };
 
 export const fileUrl = (p: Photo) => (p.file ? `https://en.wikipedia.org/wiki/File:${encodeURIComponent(p.file)}` : `https://en.wikipedia.org/wiki/${encodeURIComponent(p.page)}`);
+
+/**
+ * Decide once whether a group (e.g. 22 starters) has enough photos to show them
+ * uniformly. Resolves when every lookup finishes or after `timeoutMs`, then never flips.
+ */
+export function usePhotoCoverage(names: string[], threshold = 0.7, timeoutMs = 2500) {
+  const [decision, setDecision] = useState<boolean | null>(null);
+  const key = names.join("|");
+  useEffect(() => {
+    if (!names.length) return;
+    let done = false;
+    const results = new Map<string, boolean>();
+    const decide = () => {
+      if (done) return;
+      done = true;
+      const hits = [...results.values()].filter(Boolean).length;
+      setDecision(hits / names.length >= threshold);
+    };
+    const check = () => results.size >= names.length && decide();
+    for (const n of names) {
+      const now = requestPhoto(n, undefined, (p) => {
+        results.set(n, !!p);
+        check();
+      });
+      if (now !== undefined) results.set(n, !!now);
+    }
+    check();
+    const t = setTimeout(decide, timeoutMs);
+    return () => {
+      done = true;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return decision;
+}
