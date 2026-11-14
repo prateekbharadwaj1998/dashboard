@@ -25,20 +25,36 @@ const ok = (name, cond, extra = '') => results.push(`${cond ? 'PASS' : 'FAIL'} $
   };
   const go = (u) => p.goto(BASE + u, { waitUntil: 'networkidle', timeout: 45000 });
 
-  await step('live home', async () => {
+  await step('home', async () => {
     await go('/');
     await p.waitForSelector('[aria-busy]', { state: 'detached', timeout: 30000 }).catch(() => {});
     const body = await p.locator('main').innerText();
-    ok('home loads live data', /Live data · updated/.test(body) && !/unavailable/.test(body), body.slice(0, 80).replace(/\n/g, ' '));
-    const rows = await p.locator('a[href*="match/?id="], a[href*="match?id="]').count();
-    const empty = await p.locator('text=No matches on this day').count();
-    ok('home shows matches or empty state', rows > 0 || empty > 0, `${rows} rows`);
-    await p.keyboard.press('ArrowRight');
+    const hasHero = /LIVE|NEXT UP|RESULT/.test(body) && /Top matches/.test(body);
+    ok('home shows hero + top matches (or empty state)', hasHero || /No matches/.test(body), body.slice(0, 80).replace(/\n/g, ' '));
+    const rows = await p.locator('main .panel a[href*="match"]').count();
+    ok('top matches capped at 8 before Show more', rows <= 8, String(rows));
+    await p.click('a[aria-label="Next day"]');
     await p.waitForURL(/date=/, { timeout: 8000 });
-    ok('→ moves a day', /date=\d{4}-\d{2}-\d{2}/.test(path()), path());
+    ok('day stepper moves a day', /date=\d{4}-\d{2}-\d{2}/.test(path()), path());
+  });
+
+  await step('all matches (L2)', async () => {
+    await go('/matches/');
+    await p.waitForSelector('[aria-busy]', { state: 'detached', timeout: 30000 }).catch(() => {});
     await p.click('role=tab[name=/Finished/]');
     await p.waitForTimeout(400);
-    ok('filter tabs respond', (await p.locator('role=tab[name=/Finished/]').getAttribute('aria-selected')) === 'true');
+    ok('L2 filter tabs respond', (await p.locator('role=tab[name=/Finished/]').getAttribute('aria-selected')) === 'true');
+    await p.keyboard.press('ArrowRight');
+    await p.waitForURL(/date=/, { timeout: 8000 });
+    ok('L2 → moves a day', /matches\/?\?date=/.test(path()), path());
+  });
+
+  await step('sidebar IA', async () => {
+    await go('/competitions/');
+    const groups = await p.locator('aside nav button[aria-expanded]').allInnerTexts();
+    ok('sidebar has Following + Competitions groups', groups.some((g) => /following/i.test(g)) && groups.some((g) => /competitions/i.test(g)), groups.join(','));
+    const primary = await p.locator('aside nav > div').first().locator('a').count();
+    ok('sidebar primary nav is 2 items', primary === 2, String(primary));
   });
 
   await step('match centre', async () => {
@@ -46,8 +62,16 @@ const ok = (name, cond, extra = '') => results.push(`${cond ? 'PASS' : 'FAIL'} $
     await p.waitForSelector('text=Brighton', { timeout: 30000 });
     ok('match hero renders', (await p.locator('text=Full Time').count()) > 0);
     ok('timeline + pulse render', (await p.locator('text=Timeline').count()) === 1 && (await p.locator('text=Pulse').count()) >= 1);
-    await p.click('button:has-text("Line-ups")');
+    await p.click('[role=tab]:has-text("Line-ups")');
     await p.waitForTimeout(1200);
+    ok('tab synced to URL', /tab=lineups/.test(path()), path());
+    await p.locator('[role=tab]:has-text("Line-ups")').focus();
+    await p.keyboard.press('ArrowRight');
+    await p.waitForTimeout(250);
+    ok('← → moves between tabs', (await p.locator('[role=tab][aria-selected=true]').innerText()) === 'Stats');
+    await p.keyboard.press('2');
+    await p.waitForTimeout(250);
+    ok('number keys pick tabs', (await p.locator('[role=tab][aria-selected=true]').innerText()) === 'Line-ups');
     const nodes = await p.locator('.pitch svg g.cursor-pointer').count();
     ok('pitch shows 22 starters', nodes === 22, String(nodes));
     await p.locator('.pitch svg g.cursor-pointer').first().click();
@@ -55,10 +79,10 @@ const ok = (name, cond, extra = '') => results.push(`${cond ? 'PASS' : 'FAIL'} $
     ok('player sheet with rating breakdown', (await p.locator('text=HS Rating breakdown').count()) === 1);
     await p.keyboard.press('Escape');
     await p.locator('aside button[aria-label="Close"]').click().catch(() => {});
-    await p.click('button:has-text("Stats")');
+    await p.click('[role=tab]:has-text("Stats")');
     await p.waitForTimeout(500);
     ok('team stats tab', (await p.locator('text=Possession').count()) > 0);
-    await p.click('button:has-text("Commentary")');
+    await p.click('[role=tab]:has-text("Commentary")');
     await p.waitForTimeout(500);
     ok('commentary tab', (await p.locator('main ol li').count()) > 20);
   });
@@ -67,11 +91,11 @@ const ok = (name, cond, extra = '') => results.push(`${cond ? 'PASS' : 'FAIL'} $
     await go('/competition/?lg=eng.1');
     await p.waitForTimeout(1500);
     ok('competition fixtures', (await p.locator('a[href*="match"]').count()) > 0);
-    await p.click('button:has-text("Table")');
+    await p.click('[role=tab]:has-text("Table")');
     await p.waitForTimeout(1500);
     const rows = await p.locator('main tbody tr').count();
     ok('competition table has 20 rows', rows === 20, String(rows));
-    await p.click('button:has-text("Top scorers")');
+    await p.click('[role=tab]:has-text("Top scorers")');
     await p.waitForTimeout(1500);
     ok('top scorers list', (await p.locator('main ol li').count()) >= 10);
   });
@@ -79,14 +103,14 @@ const ok = (name, cond, extra = '') => results.push(`${cond ? 'PASS' : 'FAIL'} $
   await step('team + follow', async () => {
     await go('/team/?id=359&lg=eng.1');
     await p.waitForSelector('h1:has-text("Arsenal")', { timeout: 30000 });
-    await p.click('button:has-text("Follow")');
+    await p.click('main button:has-text("Follow")');
     await p.waitForTimeout(400);
     ok('followed team in sidebar', (await p.locator('aside nav a:has-text("Arsenal")').count()) > 0);
-    await p.click('button:has-text("squad")');
+    await p.click('[role=tab]:has-text("Squad")');
     await p.waitForTimeout(1500);
-    const players = await p.locator('main a[href*="player"]').count();
+    const players = await p.locator('[role=tabpanel]:not([hidden]) a[href*="player"]').count();
     ok('squad lists players', players >= 15, String(players));
-    await p.locator('main a[href*="player"]').first().click();
+    await p.locator('[role=tabpanel]:not([hidden]) a[href*="player"]').first().click();
     await p.waitForURL(/player/, { timeout: 8000 });
     await p.waitForTimeout(1500);
     ok('player page from squad', (await p.locator('text=Season by competition').count()) === 1);
@@ -163,11 +187,13 @@ const ok = (name, cond, extra = '') => results.push(`${cond ? 'PASS' : 'FAIL'} $
     m.on('pageerror', (e) => errs.push('mobile ' + e.message));
     await m.goto(BASE + '/competitions/', { waitUntil: 'networkidle' });
     await m.click('button[aria-label="Open menu"]');
+    await m.waitForTimeout(400);
+    ok('drawer locks page scroll', (await m.evaluate(() => document.body.style.overflow)) === 'hidden');
     await m.waitForTimeout(500);
-    await m.locator('aside.fixed nav a', { hasText: 'Streamer studio' }).click();
+    await m.locator('aside.fixed a', { hasText: 'Streamer studio' }).click();
     await m.waitForURL(/studio/, { timeout: 8000 });
-    await m.waitForTimeout(500);
-    ok('mobile drawer navigates + closes', (await m.locator('button[aria-label="Close menu"]').count()) === 0);
+    const closed = await m.locator('button[aria-label="Close menu"]').waitFor({ state: 'detached', timeout: 4000 }).then(() => true, () => false);
+    ok('mobile drawer navigates + closes', closed);
   });
 
   ok('no runtime errors', errs.length === 0, errs.slice(0, 4).join(' | '));

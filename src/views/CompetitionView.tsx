@@ -14,6 +14,8 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { Panel } from "@/components/ui/Panel";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { MiniTable } from "./MatchCentre";
+import { Tabs, TabPanels, useUrlTab } from "@/components/ui/Tabs";
+import { usePinnedComps } from "@/lib/follow";
 import { PlayerPhoto } from "@/components/ui/PlayerPhoto";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -143,10 +145,24 @@ function Leaders({ slug }: { slug: string }) {
   );
 }
 
+function PinButton({ slug }: { slug: string }) {
+  const { pins, toggle } = usePinnedComps();
+  const on = pins.includes(slug);
+  return (
+    <button
+      onClick={() => toggle(slug)}
+      aria-pressed={on}
+      className={clsx("inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-3 text-sm font-medium shadow-ring transition-colors", on ? "bg-accent-soft text-accent-text" : "text-fg-2 hover:bg-hover")}
+    >
+      {on ? "★ Pinned" : "☆ Pin"}
+    </button>
+  );
+}
+
 export function CompetitionView() {
   const slug = useSearchParams().get("lg") ?? "eng.1";
   const comp = compBySlug(slug);
-  const [tab, setTab] = useState<Tab>("matches");
+  const [tab, setTab] = useUrlTab<Tab>(["matches", "table", "stats"], "matches");
   if (!comp) return <EmptyState title="Competition not found" body={`“${slug}” isn’t one of the ${"220"} competitions in the live feed.`} actions={[{ href: "/competitions", label: "Browse all competitions" }]} />;
   const tabs: { key: Tab; label: string }[] = [
     { key: "matches", label: "Matches" },
@@ -165,24 +181,23 @@ export function CompetitionView() {
               <p className="text-sm text-fg-3">{comp.tournament ? "Tournament" : "League"} · live from ESPN</p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <PinButton slug={slug} />
           {INSIGHTS[slug] && (
             <Link href={`/league/${INSIGHTS[slug]}/stats`} className="inline-flex h-8 items-center gap-2 rounded-md bg-accent-soft px-3 text-sm font-medium text-accent-text hover:bg-accent hover:text-white">
               <BarChart3 size={14} /> Season insights
             </Link>
           )}
+          </div>
         </div>
       </div>
-      <div className="mb-4 flex gap-1 border-b">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={clsx("relative px-3 pt-1 pb-2.5 text-sm", tab === t.key ? "text-fg" : "text-fg-3 hover:text-fg-2")}>
-            {t.label}
-            {tab === t.key && <motion.span layoutId="comp-tab" className="absolute inset-x-2 -bottom-px h-[2px] rounded-full bg-accent" />}
-          </button>
-        ))}
-      </div>
-      {tab === "matches" && <Fixtures slug={slug} />}
-      {tab === "table" && <Standings slug={slug} />}
-      {tab === "stats" && <Leaders slug={slug} />}
+      <Tabs<Tab> className="mb-4 border-b" idBase="comp" label="Competition sections" items={tabs} value={tab} onChange={setTab} />
+      <TabPanels<Tab>
+        idBase="comp"
+        order={["matches", "table", "stats"]}
+        value={tab}
+        render={(k) => (k === "matches" ? <Fixtures slug={slug} /> : k === "table" ? <Standings slug={slug} /> : <Leaders slug={slug} />)}
+      />
     </>
   );
 }

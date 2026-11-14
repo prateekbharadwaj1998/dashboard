@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronRight, Menu, Moon, Search, Sun } from "lucide-react";
+import { ChevronRight, EyeOff, Menu, Moon, Search, Sun } from "lucide-react";
 import { motion } from "motion/react";
 import { LEAGUE_BY_ID, SEASONS, isLeagueId } from "@/lib/data/leagues";
 import { seasonHref, splitSeason } from "@/lib/paths";
@@ -104,6 +104,9 @@ export function Topbar() {
         <button onClick={() => setOpen(true)} className="rounded-md p-1.5 text-fg-3 hover:bg-hover hover:text-fg md:hidden" aria-label="Search">
           <Search size={16} />
         </button>
+        <Link href="/glance" title="Glance mode · B" aria-label="Glance mode" className="hidden rounded-md p-1.5 text-fg-3 transition-colors hover:bg-hover hover:text-fg sm:inline-flex">
+          <EyeOff size={16} />
+        </Link>
         <button
           onClick={toggle}
           className="rounded-md p-1.5 text-fg-3 transition-colors hover:bg-hover hover:text-fg"

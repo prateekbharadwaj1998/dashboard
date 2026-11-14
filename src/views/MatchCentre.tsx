@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, Users, Whistle, X, Tv } from "lucide-react";
 import clsx from "clsx";
 import { SITE, useEspn } from "@/lib/espn/client";
@@ -22,6 +22,7 @@ import { RatingChip } from "@/components/matchcentre/RatingChip";
 import { sideColors } from "@/components/matchcentre/colors";
 import { ratingStyle } from "@/lib/espn/rating";
 import { PlayerPhoto } from "@/components/ui/PlayerPhoto";
+import { Tabs, TabPanels, useUrlTab } from "@/components/ui/Tabs";
 import { PhotoCredit } from "@/components/ui/PhotoCredit";
 
 type Tab = "overview" | "lineups" | "stats" | "commentary" | "table" | "h2h";
@@ -246,7 +247,8 @@ function PlayerSheet({ p, onClose, league, teamName }: { p: LineupPlayer | null;
 }
 
 export function MatchCentre({ id }: { id: string }) {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [urlTab, setTab] = useUrlTab<Tab>(["overview", "lineups", "stats", "commentary", "table", "h2h"], "overview");
+  const sentinel = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<LineupPlayer | null>(null);
   const url = `${SITE}/all/summary?event=${encodeURIComponent(id)}`;
   const [poll, setPoll] = useState<number | undefined>();
@@ -278,6 +280,7 @@ export function MatchCentre({ id }: { id: string }) {
     { key: "h2h", label: "Form", show: d.form.length > 0 },
   ];
   const visibleTabs = tabs.filter((t) => t.show);
+  const tab: Tab = visibleTabs.some((t) => t.key === urlTab) ? urlTab : "overview";
   const topRated = d.lineups
     .flatMap((l) => [...l.starters, ...l.bench].map((p) => ({ p, l })))
     .filter((x) => x.p.rating != null)
@@ -287,25 +290,43 @@ export function MatchCentre({ id }: { id: string }) {
   return (
     <>
       <Hero d={d} />
-      <div className="sticky top-12 z-20 -mx-4 mb-4 flex gap-1 overflow-x-auto border-b bg-app/85 px-4 backdrop-blur-xl [scrollbar-width:none] md:-mx-8 md:px-8">
-        {visibleTabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={clsx("relative shrink-0 px-3 pt-2 pb-2.5 text-sm transition-colors", tab === t.key ? "text-fg" : "text-fg-3 hover:text-fg-2")}
-          >
-            {t.label}
-            {tab === t.key && <motion.span layoutId="mc-tab" className="absolute inset-x-2 -bottom-px h-[2px] rounded-full bg-accent" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
-          </button>
-        ))}
-        <span className="ml-auto hidden shrink-0 items-center text-2xs text-fg-4 sm:flex" suppressHydrationWarning>
-          {d.card.state === "in" ? "Live · refreshing every 15s" : updatedAt ? "Up to date" : ""}
-        </span>
+      <div ref={sentinel} className="scroll-mt-12" />
+      <div className="sticky top-12 z-20 -mx-4 mb-4 border-b bg-app/90 px-4 md:-mx-8 md:px-8">
+        <Tabs<Tab>
+          items={visibleTabs.map((t) => ({ key: t.key, label: t.label }))}
+          value={tab}
+          onChange={(t) => {
+            setTab(t);
+            // if the bar is stuck (page scrolled past it), start the new panel at its top
+            const r = sentinel.current?.getBoundingClientRect();
+            if (r && r.top < 48) sentinel.current?.scrollIntoView({ block: "start" });
+          }}
+          label="Match sections"
+          idBase="mc"
+          hotkeys
+          trailing={
+            <span className="ml-3 hidden shrink-0 items-center text-2xs text-fg-4 sm:flex" suppressHydrationWarning>
+              {d.card.state === "in" ? (
+                <>
+                  <span className="live-dot mr-1.5" /> Live · every 15s
+                </>
+              ) : updatedAt ? (
+                "Up to date"
+              ) : (
+                ""
+              )}
+            </span>
+          }
+        />
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div key={tab} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-          {tab === "overview" && (
+      <TabPanels<Tab>
+        idBase="mc"
+        order={visibleTabs.map((t) => t.key)}
+        value={tab}
+        render={(k) => (
+          <>
+          {k === "overview" && (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="space-y-4">
                 {d.events.length > 0 && (
@@ -380,7 +401,7 @@ export function MatchCentre({ id }: { id: string }) {
             </div>
           )}
 
-          {tab === "lineups" && (
+          {k === "lineups" && (
             <div className="space-y-4">
               <Panel
                 title={
@@ -410,7 +431,7 @@ export function MatchCentre({ id }: { id: string }) {
             </div>
           )}
 
-          {tab === "stats" && (
+          {k === "stats" && (
             <Panel title="Team stats">
               <div className="mb-4 flex justify-between text-sm font-medium">
                 <span className="flex items-center gap-2"><TeamLogo src={d.card.home.logo} abbr={d.card.home.abbr} size={18} />{d.card.home.short}</span>
@@ -420,9 +441,9 @@ export function MatchCentre({ id }: { id: string }) {
             </Panel>
           )}
 
-          {tab === "commentary" && <CommentaryFeed d={d} />}
+          {k === "commentary" && <CommentaryFeed d={d} />}
 
-          {tab === "table" && (
+          {k === "table" && (
             <div className="space-y-4">
               {d.standings.map((g) => (
                 <Panel key={g.name} title={g.name} pad={false}>
@@ -432,7 +453,7 @@ export function MatchCentre({ id }: { id: string }) {
             </div>
           )}
 
-          {tab === "h2h" && (
+          {k === "h2h" && (
             <div className="grid gap-4 md:grid-cols-2">
               {d.form.map((f) => {
                 const t = d.card[f.side];
@@ -459,8 +480,9 @@ export function MatchCentre({ id }: { id: string }) {
               })}
             </div>
           )}
-        </motion.div>
-      </AnimatePresence>
+          </>
+        )}
+      />
 
       <PlayerSheet
         p={selected}

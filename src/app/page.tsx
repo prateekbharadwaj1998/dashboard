@@ -1,11 +1,11 @@
 import { Suspense } from "react";
-import { LiveView } from "@/views/LiveView";
+import { HomeView } from "@/views/HomeView";
 
-// Live matches across every competition ESPN covers, fetched in the browser.
+// Home: one hero (the live match that matters most), then the top matches.
 export default function Page() {
   return (
     <Suspense>
-      <LiveView />
+      <HomeView />
     </Suspense>
   );
 }

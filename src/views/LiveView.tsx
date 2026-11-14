@@ -37,13 +37,13 @@ function useAgo(ts?: number) {
 function DayStrip({ selected, today }: { selected: string; today: string }) {
   const router = useRouter();
   const days = Array.from({ length: 15 }, (_, i) => addDays(selected, i - 7));
-  const href = (d: string) => (d === today ? "/" : `/?date=${d}`);
+  const href = (d: string) => (d === today ? "/matches" : `/matches?date=${d}`);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest("input,textarea,[cmdk-root]") || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "ArrowLeft") router.push(href(addDays(selected, -1)), { scroll: false });
       if (e.key === "ArrowRight") router.push(href(addDays(selected, 1)), { scroll: false });
-      if (e.key === "t") router.push("/", { scroll: false });
+      if (e.key === "t") router.push("/matches", { scroll: false });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -171,7 +171,7 @@ export function LiveView() {
   const today = tz ? localDayOf(Date.now(), tz) : null;
   const q = sp.get("date") ?? undefined;
   const selected = isDayKey(q) ? q : today;
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(() => (["live", "upcoming", "finished"].includes(sp.get("state") ?? "") ? (sp.get("state") as Filter) : "all"));
   const [showAll, setShowAll] = useState(false);
   const { matches, loaded, error, updatedAt, pollMs } = useDayMatches(selected, tz);
   const { flashes, goals } = useGoalFlashes(matches);
@@ -246,12 +246,12 @@ export function LiveView() {
   const goalsToday = matches.reduce((t, m) => t + (m.home.score ?? 0) + (m.away.score ?? 0), 0);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="mx-auto max-w-[900px]">
       {live.length > 0 && <div className="live-hairline" />}
       <div className="min-w-0 space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="display text-[26px] leading-8">Matches</h1>
+            <h1 className="display text-[26px] leading-8">All matches</h1>
             <p className="mt-0.5 h-5 text-sm text-fg-3">
               {selected && fmtDay(selected, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               {tz && <span className="text-fg-4"> · {tz.replace(/_/g, " ")}</span>}
@@ -361,47 +361,6 @@ export function LiveView() {
         )}
       </div>
 
-      <aside className="space-y-4">
-        <Panel title="Today in numbers" delay={0.05}>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              ["Matches", counts.all],
-              ["Live", counts.live],
-              ["Goals", goalsToday],
-            ].map(([label, v]) => (
-              <div key={label}>
-                <div className="text-2xs text-fg-3">{label}</div>
-                <div className={clsx("tnum text-xl font-semibold", label === "Live" && counts.live ? "text-live" : "")}>{v}</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 text-2xs text-fg-4">{new Set(matches.map((m) => m.league)).size} competitions worldwide</div>
-        </Panel>
-        <Panel title="Streamer studio" subtitle="Live scorebugs, tickers and tables for OBS" delay={0.1}>
-          <Link
-            href="/studio"
-            className="group flex items-center justify-between rounded-lg bg-accent-soft px-3 py-2.5 text-sm font-medium text-accent-text transition-colors hover:bg-accent hover:text-white"
-          >
-            <span className="flex items-center gap-2">
-              <Tv size={15} /> Build an overlay
-            </span>
-            <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </Panel>
-        <Panel title="Competitions" delay={0.15} pad={false}>
-          <div className="grid grid-cols-1 gap-px px-2 pb-2">
-            {["eng.1", "esp.1", "uefa.champions", "fifa.world", "uefa.nations", "ind.1", "ksa.1", "usa.1"].map((s) => (
-              <Link key={s} href={`/competition?lg=${s}`} className="flex h-8 items-center gap-2.5 rounded-md px-2 text-sm text-fg-2 hover:bg-hover hover:text-fg">
-                <CompLogo slug={s} size={16} />
-                <span className="truncate">{compBySlug(s)?.name}</span>
-              </Link>
-            ))}
-            <Link href="/competitions" className="mt-1 px-2 text-xs text-accent-text hover:underline">
-              All competitions →
-            </Link>
-          </div>
-        </Panel>
-      </aside>
 
       {/* goal toasts */}
       <div className="pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col gap-2">

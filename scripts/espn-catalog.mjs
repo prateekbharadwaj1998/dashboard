@@ -43,6 +43,19 @@ try {
   out.sort((a, b) => a.slug.localeCompare(b.slug));
   await writeFile(OUT, JSON.stringify(out, null, 0) + "\n");
   console.log(`catalog: ${out.length} competitions`);
+
+  // "Big" clubs for the home-page importance score: every club in the top five leagues.
+  const big = [];
+  for (const slug of ["eng.1", "esp.1", "ger.1", "ita.1", "fra.1"]) {
+    try {
+      const js = await getJson(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/teams`);
+      for (const t of js.sports?.[0]?.leagues?.[0]?.teams ?? []) if (t.team?.id) big.push(String(t.team.id));
+    } catch {}
+  }
+  if (big.length > 60) {
+    await writeFile(new URL("../src/data/bigTeams.json", import.meta.url), JSON.stringify([...new Set(big)].sort()) + "\n");
+    console.log(`big teams: ${new Set(big).size}`);
+  }
 } catch (e) {
   // Network trouble at build time must never break the build: keep the committed catalog.
   const existing = JSON.parse(await readFile(OUT, "utf8").catch(() => "[]"));

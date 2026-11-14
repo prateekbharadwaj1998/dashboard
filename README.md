@@ -25,7 +25,8 @@ It shows real-time scores, line-ups on a pitch, player ratings, squads and playe
 
 | Route | What it shows |
 | --- | --- |
-| `/` | Every match on a day across all competitions: a live-now rail, filters, the teams you follow first, goal flashes and toasts |
+| `/` | Home. One hero card: the live match that matters most, or else the next big kick-off or the result of the day. Below it: chips for the other live games, then the top 8 matches ranked by importance, with **Show more**. |
+| `/matches` | Every match on a day across all competitions, with a date strip, Live/Upcoming/Finished filters and competition groups |
 | `/match?id=` | Match centre: hero, timeline, Pulse, line-ups on a pitch with ratings, team stats, live commentary, table, form |
 | `/competition?lg=` | Monthly fixtures and results, table (all groups), top scorers and assists |
 | `/team?id=` | Fixtures, results in every competition, squad (age, nationality, appearances, goals, assists, cards), table position |
@@ -83,6 +84,18 @@ The same code runs in two modes:
 - The current season is unprefixed: `/league/epl`, `/team/arsenal`.
 - Past seasons are prefixed: `/2025-26/league/epl`.
 - Matches render from data on the client: `/match?id=…`.
+
+## How the home page decides what matters
+
+`src/lib/espn/importance.ts` scores every match:
+- **Competition tier:** top-five leagues, the Champions League and major tournaments score highest.
+- **Round:** finals and semi-finals score more, and early cup rounds sink.
+- **Big clubs:** a bonus for clubs from the top-five leagues (from `src/data/bigTeams.json`) and the strongest national teams.
+- **Followed teams:** always rank first.
+- **Live drama:** live matches score more, especially close ones late on.
+- **Kick-off timing:** matches starting soon score more.
+
+The hero is **sticky**. It only switches when its match ends, or when another live match beats it by a clear margin. Live games from lower leagues show as a slim "Live now" bar instead of taking the hero.
 
 ## Data pipeline
 

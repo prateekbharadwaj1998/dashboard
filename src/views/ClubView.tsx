@@ -13,6 +13,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { Panel } from "@/components/ui/Panel";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { MiniTable } from "./MatchCentre";
+import { Tabs, TabPanels, useUrlTab } from "@/components/ui/Tabs";
 import { PlayerPhoto } from "@/components/ui/PlayerPhoto";
 import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import { yearOf } from "@/lib/photos";
@@ -160,7 +161,7 @@ function Squad({ players, league, color }: { players: SquadPlayer[]; league: str
 export function ClubView() {
   const sp = useSearchParams();
   const id = sp.get("id") ?? "";
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useUrlTab<Tab>(["overview", "fixtures", "squad", "table"], "overview");
   const results = useEspn<any>(id ? `${SITE}/all/teams/${id}/schedule` : null, { ttl: 120_000 });
   const fixtures = useEspn<any>(id ? `${SITE}/all/teams/${id}/schedule?fixture=true` : null, { ttl: 120_000, poll: 60_000 });
   const played = useMemo(() => scheduleMatches(results.data), [results.data]);
@@ -252,15 +253,26 @@ export function ClubView() {
           )}
         </div>
       </div>
-      <div className="mb-4 flex gap-1 border-b">
-        {(["overview", "fixtures", "squad", "table"] as Tab[]).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={clsx("relative px-3 pt-1 pb-2.5 text-sm capitalize", tab === t ? "text-fg" : "text-fg-3 hover:text-fg-2")}>
-            {t}
-            {tab === t && <motion.span layoutId="club-tab" className="absolute inset-x-2 -bottom-px h-[2px] rounded-full bg-accent" />}
-          </button>
-        ))}
-      </div>
-      {tab === "overview" && (
+      <Tabs<Tab>
+        className="mb-4 border-b"
+        idBase="club"
+        label="Team sections"
+        items={[
+          { key: "overview", label: "Overview" },
+          { key: "fixtures", label: "Fixtures" },
+          { key: "squad", label: "Squad" },
+          { key: "table", label: "Table" },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
+      <TabPanels<Tab>
+        idBase="club"
+        order={["overview", "fixtures", "squad", "table"]}
+        value={tab}
+        render={(k) => (
+          <>
+      {k === "overview" && (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-4">
             {next && (
@@ -302,7 +314,7 @@ export function ClubView() {
           </div>
         </div>
       )}
-      {tab === "fixtures" && (
+      {k === "fixtures" && (
         <div className="grid gap-4 lg:grid-cols-2">
           <Panel title="Upcoming" pad={false}>
             <div className="px-1.5 pb-1.5">
@@ -321,8 +333,8 @@ export function ClubView() {
           </Panel>
         </div>
       )}
-      {tab === "squad" && (roster.loading ? <PageSkeleton rows={12} /> : squad.length ? <Squad players={squad} league={lg ?? "all"} color={team.color} /> : <Panel className="py-10 text-center text-sm text-fg-4">No squad list available for this team.</Panel>)}
-      {tab === "table" &&
+      {k === "squad" && (roster.loading ? <PageSkeleton rows={12} /> : squad.length ? <Squad players={squad} league={lg ?? "all"} color={team.color} /> : <Panel className="py-10 text-center text-sm text-fg-4">No squad list available for this team.</Panel>)}
+      {k === "table" &&
         (groups.length ? (
           groups
             .filter((g) => g === myGroup || groups.length === 1)
@@ -334,6 +346,9 @@ export function ClubView() {
         ) : (
           <Panel className="py-10 text-center text-sm text-fg-4">No table available.</Panel>
         ))}
+          </>
+        )}
+      />
     </>
   );
 }
