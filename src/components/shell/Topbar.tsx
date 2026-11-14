@@ -104,8 +104,8 @@ export function Topbar() {
         <button onClick={() => setOpen(true)} className="rounded-md p-1.5 text-fg-3 hover:bg-hover hover:text-fg md:hidden" aria-label="Search">
           <Search size={16} />
         </button>
-        <Link href="/glance" title="Glance mode · B" aria-label="Glance mode" className="hidden rounded-md p-1.5 text-fg-3 transition-colors hover:bg-hover hover:text-fg sm:inline-flex">
-          <EyeOff size={16} />
+        <Link href="/glance" title="Glance: a minimal, low-key scoreboard (B)" aria-label="Glance mode" className="hidden items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-fg-3 transition-colors hover:bg-hover hover:text-fg sm:inline-flex">
+          <EyeOff size={15} /> Glance
         </Link>
         <button
           onClick={toggle}

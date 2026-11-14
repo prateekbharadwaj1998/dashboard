@@ -14,6 +14,8 @@ import { Panel } from "@/components/ui/Panel";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LocalTime } from "@/components/match/LocalTime";
 import { ScoreRoll } from "@/components/live/ScoreRoll";
+import { LiveClock } from "@/components/live/LiveClock";
+import { InfoTip } from "@/components/ui/InfoTip";
 import { Pitch, BenchList } from "@/components/matchcentre/Pitch";
 import { Timeline } from "@/components/matchcentre/Timeline";
 import { Pulse } from "@/components/matchcentre/Pulse";
@@ -43,7 +45,24 @@ function FollowTeam({ id, name, logo, league }: { id: string; name: string; logo
   );
 }
 
-function Hero({ d }: { d: MatchDetail }) {
+function phaseLabel(m: MatchDetail["card"]) {
+  if (m.status === "HT") return "Back in 15";
+  if (/ET|extra/i.test(m.statusLong) || (m.period ?? 0) > 2) return "Extra time";
+  return m.period === 2 ? "Second half" : "First half";
+}
+
+function StartsIn({ iso }: { iso: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const mins = Math.round((Date.parse(iso) - now) / 60_000);
+  const rel = mins <= 0 ? "Kicking off" : mins < 60 ? `Starts in ${mins} min` : mins < 48 * 60 ? `Starts in ${Math.floor(mins / 60)}h ${mins % 60}m` : "Kick-off";
+  return <>{rel}</>;
+}
+
+function Hero({ d, fetchedAt }: { d: MatchDetail; fetchedAt?: number }) {
   const m = d.card;
   const [hc, ac] = sideColors(m.home.color, m.away.color);
   const scorers = (side: "home" | "away") =>
@@ -112,13 +131,25 @@ function Hero({ d }: { d: MatchDetail }) {
               <LocalTime iso={m.date} opts={{ hour: "2-digit", minute: "2-digit", hour12: false }} />
             </div>
           )}
-          <div className="mt-1 text-xs">
+          <div className="mt-2 flex flex-col items-center gap-1">
             {live ? (
-              <span className="flex items-center gap-1.5 font-semibold text-live">
-                <span className="live-dot" /> {m.status === "HT" ? "Half-time" : m.status}
-              </span>
+              <>
+                <span className="flex items-center gap-2 rounded-full bg-[color-mix(in_oklab,var(--live)_14%,transparent)] px-3 py-1 text-base font-semibold text-live">
+                  <span className="live-dot" />
+                  {m.status === "HT" ? "Half-time" : <LiveClock m={m} fetchedAt={fetchedAt} />}
+                </span>
+                <span className="text-2xs font-medium tracking-wide text-fg-3 uppercase">{phaseLabel(m)}</span>
+              </>
+            ) : m.state === "pre" ? (
+              /PP|Canc/.test(m.status) ? (
+                <span className="text-xs text-fg-3">{m.statusLong}</span>
+              ) : (
+                <span className="text-xs text-fg-3">
+                  <StartsIn iso={m.date} /> · your time
+                </span>
+              )
             ) : (
-              <span className="text-fg-3">{m.state === "pre" ? (/PP|Canc/.test(m.status) ? m.statusLong : "Kick-off") : m.statusLong}</span>
+              <span className="text-xs font-medium text-fg-3">{m.statusLong === "Full Time" ? "Full time" : m.statusLong}</span>
             )}
           </div>
           {(m.home.shootout != null || m.away.shootout != null) && (
@@ -146,8 +177,8 @@ function Hero({ d }: { d: MatchDetail }) {
             <Whistle size={11} /> {d.referee}
           </span>
         )}
-        <Link href={`/studio?match=${m.id}`} className="inline-flex items-center gap-1 text-accent-text hover:underline">
-          <Tv size={11} /> Stream overlay
+        <Link href={`/studio?match=${m.id}`} title="Free OBS / browser-source scoreboard for streamers" className="inline-flex items-center gap-1 text-accent-text hover:underline">
+          <Tv size={11} /> Use on your stream ↗
         </Link>
       </div>
     </div>
@@ -289,7 +320,7 @@ export function MatchCentre({ id }: { id: string }) {
 
   return (
     <>
-      <Hero d={d} />
+      <Hero d={d} fetchedAt={updatedAt} />
       <div ref={sentinel} className="scroll-mt-12" />
       <div className="sticky top-12 z-20 -mx-4 mb-4 border-b bg-app/90 px-4 md:-mx-8 md:px-8">
         <Tabs<Tab>
