@@ -9,7 +9,6 @@ import type { LeagueId, Match, Zone } from "@/lib/data/types";
 import { teamBySlug } from "@/lib/data/teams";
 import { Crest } from "@/components/ui/Crest";
 import { FormStrip } from "@/components/ui/FormPill";
-import { FollowButton, useFavorites } from "@/components/ui/Favorites";
 import { Segmented } from "@/components/ui/Segmented";
 import { useSeasonHref } from "@/lib/useSeasonHref";
 
@@ -39,7 +38,7 @@ export function StandingsTable({
   highlight?: string[];
 }) {
   const [filter, setFilter] = useState<Filter>("all");
-  const { following } = useFavorites();
+  const following: string[] = [];
   const href = useSeasonHref();
   const rows = useMemo(
     () =>
@@ -127,9 +126,6 @@ export function StandingsTable({
                             {delta > 0 ? `▲${delta}` : `▼${-delta}`}
                           </motion.span>
                         )}
-                        <span className="opacity-0 transition-opacity group-hover:opacity-100">
-                          <FollowButton slug={r.team} size={12} />
-                        </span>
                       </Link>
                     </td>
                     <td className="tnum text-center text-fg-2">{r.p}</td>

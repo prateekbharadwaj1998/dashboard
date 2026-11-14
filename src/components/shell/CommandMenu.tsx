@@ -3,7 +3,11 @@ import { Command } from "cmdk";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { CalendarDays, GitCompareArrows, Moon, Sun, CornerDownLeft } from "lucide-react";
+import { CalendarDays, GitCompareArrows, Moon, Sun, CornerDownLeft, Tv, EyeOff, Trophy } from "lucide-react";
+import { ALL_COMPETITIONS, priorityOf } from "@/lib/espn/competitions";
+
+const COMPS_BY_PRIORITY = [...ALL_COMPETITIONS].sort((a, b) => priorityOf(a.slug) - priorityOf(b.slug) || a.name.localeCompare(b.name));
+import { CompLogo } from "@/components/ui/CompLogo";
 import { LEAGUES, LEAGUE_BY_ID } from "@/lib/data/leagues";
 import { teamBySlug } from "@/lib/data/teams";
 import type { LeagueId } from "@/lib/data/types";
@@ -40,6 +44,10 @@ export function CommandMenu({ teams }: { teams: SearchTeam[] }) {
         setOpen(true);
         return;
       }
+      if (e.key === "b" && !window.location.pathname.includes("/glance")) {
+        router.push("/glance");
+        return;
+      }
       // Linear-style "g then x" navigation
       if (e.key === "g") {
         gPressed.current = Date.now();
@@ -48,7 +56,8 @@ export function CommandMenu({ teams }: { teams: SearchTeam[] }) {
       if (Date.now() - gPressed.current < 900) {
         gPressed.current = 0;
         if (e.key === "m") router.push("/");
-        else if (e.key === "c") router.push("/compare");
+        else if (e.key === "c") router.push("/competitions");
+        else if (e.key === "s") router.push("/studio");
         else if (/^[1-5]$/.test(e.key)) router.push(`/league/${LEAGUES[+e.key - 1].id}`);
       }
     };
@@ -101,7 +110,28 @@ export function CommandMenu({ teams }: { teams: SearchTeam[] }) {
                     Switch to {theme === "dark" ? "light" : "dark"} theme
                   </Command.Item>
                 </Command.Group>
-                <Command.Group heading="Leagues">
+                <Command.Group heading="Live">
+                  <Command.Item className={item} onSelect={() => go("/studio")} keywords={["obs", "overlay", "stream", "twitch", "youtube"]}>
+                    <Tv size={15} className="text-fg-3" /> Streamer studio
+                    <span className="ml-auto flex gap-1"><kbd>G</kbd><kbd>S</kbd></span>
+                  </Command.Item>
+                  <Command.Item className={item} onSelect={() => go("/glance")} keywords={["boss", "work", "minimal", "spreadsheet"]}>
+                    <EyeOff size={15} className="text-fg-3" /> Glance mode
+                    <span className="ml-auto flex gap-1"><kbd>B</kbd></span>
+                  </Command.Item>
+                  <Command.Item className={item} onSelect={() => go("/competitions")} keywords={["leagues", "cups", "world"]}>
+                    <Trophy size={15} className="text-fg-3" /> All competitions
+                    <span className="ml-auto flex gap-1"><kbd>G</kbd><kbd>C</kbd></span>
+                  </Command.Item>
+                </Command.Group>
+                <Command.Group heading="Competitions">
+                  {COMPS_BY_PRIORITY.map((c) => (
+                    <Command.Item key={c.slug} className={item} value={`${c.name} ${c.short} ${c.slug}`} onSelect={() => go(`/competition?lg=${c.slug}`)}>
+                      <CompLogo slug={c.slug} size={16} /> {c.name}
+                    </Command.Item>
+                  ))}
+                </Command.Group>
+                <Command.Group heading="Season insights">
                   {LEAGUES.map((l, i) => (
                     <Command.Item key={l.id} className={item} value={`${l.name} ${l.country}`} onSelect={() => go(`/league/${l.id}`)}>
                       <LeagueMark id={l.id} size={16} /> {l.name}
@@ -110,7 +140,7 @@ export function CommandMenu({ teams }: { teams: SearchTeam[] }) {
                     </Command.Item>
                   ))}
                 </Command.Group>
-                <Command.Group heading="Teams">
+                <Command.Group heading="Teams · season insights">
                   {teams.map((t) => {
                     const id = teamBySlug(t.slug);
                     return (

@@ -12,6 +12,9 @@ SERVER=$!
 trap 'kill $SERVER 2>/dev/null; rm -rf "$SITE"' EXIT
 for _ in $(seq 1 30); do curl -sf "http://localhost:$PORT$BASE_PATH/" > /dev/null && break; sleep 0.5; done
 export E2E_BASE="http://localhost:$PORT$BASE_PATH" E2E_ROOT="out"
+# In sandboxes where the browser cannot reach ESPN directly, set E2E_ROUTE_ESPN=1
+# (requests are then fetched by Node; NODE_USE_ENV_PROXY lets Node use HTTPS_PROXY).
+export NODE_USE_ENV_PROXY="${NODE_USE_ENV_PROXY:-1}"
 status=0
 echo "▶ interaction tests"; node e2e/interact.cjs || status=1
 echo "▶ crawl (desktop · mobile · tablet)"; node e2e/crawl.cjs || status=1

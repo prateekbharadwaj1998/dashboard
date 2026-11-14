@@ -35,6 +35,8 @@ function useCrumbs(): { label: string; href?: string }[] {
     ];
   }
   if (parts[0] === "compare") return [{ label: "Compare" }];
+  const LABELS: Record<string, string> = { competition: "Competition", competitions: "Competitions", team: "Team", player: "Player", studio: "Streamer studio", glance: "Glance" };
+  if (LABELS[parts[0]]) return [{ label: LABELS[parts[0]] }];
   return [{ label: parts[0] }];
 }
 
@@ -43,7 +45,8 @@ function SeasonSwitch() {
   const router = useRouter();
   const pathname = usePathname() ?? "/";
   const { season, rest } = splitSeason(pathname);
-  if (rest === "/" || rest.startsWith("/match")) return null;
+  // Season switching only applies to the archive analytics pages.
+  if (!/^\/(league|team\/|compare)/.test(rest)) return null;
   return (
     <Segmented<SeasonId>
       value={season}

@@ -17,6 +17,7 @@ import { OutcomeBar } from "@/components/charts/OutcomeBar";
 import { MatchRow } from "@/components/match/MatchRow";
 import { LocalTime } from "@/components/match/LocalTime";
 import { ScoreHero } from "@/components/match/ScoreHero";
+import { MatchCentre } from "./MatchCentre";
 import { LeagueMark } from "@/components/shell/LeagueMark";
 
 function NotFoundPanel() {
@@ -33,6 +34,12 @@ function NotFoundPanel() {
 
 export function MatchView() {
   const id = useSearchParams().get("id") ?? "";
+  // Numeric ids are ESPN events → live match centre. Older ids are openfootball fixtures.
+  if (/^\d+$/.test(id)) return <MatchCentre id={id} />;
+  return <LegacyMatch id={id} />;
+}
+
+function LegacyMatch({ id }: { id: string }) {
   const league = id.split("-")[0];
   const valid = isLeagueId(league);
   const live = useLeagueData([...SEASONS], valid ? [league as LeagueId] : [], IS_STATIC ? undefined : 30_000);

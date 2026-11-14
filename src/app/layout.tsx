@@ -1,16 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/shell/Providers";
-import { Sidebar } from "@/components/shell/Sidebar";
-import { Topbar } from "@/components/shell/Topbar";
+import { Shell } from "@/components/shell/Shell";
 import { CommandMenu, type SearchTeam } from "@/components/shell/CommandMenu";
 import { getAllLeagues } from "@/lib/data/repo";
 import { CURRENT_SEASON } from "@/lib/data/leagues";
 import { teamBySlug } from "@/lib/data/teams";
 
 export const metadata: Metadata = {
-  title: { default: "Halfspace — Football intelligence", template: "%s · Halfspace" },
-  description: "Live scores, tables and season analytics for Europe's top five leagues.",
+  title: { default: "Halfspace — Live football", template: "%s · Halfspace" },
+  description: "Live scores, line-ups, player ratings and stream overlays for 220+ competitions worldwide.",
 };
 
 export const viewport: Viewport = {
@@ -36,13 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <Providers>
-          <div className="flex h-dvh overflow-hidden">
-            <Sidebar />
-            <div id="scroll-root" className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">
-              <Topbar />
-              <main className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
-            </div>
-          </div>
+          <Shell>{children}</Shell>
           <CommandMenu teams={teams} />
         </Providers>
       </body>

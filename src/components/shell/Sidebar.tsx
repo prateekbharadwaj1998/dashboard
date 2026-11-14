@@ -1,18 +1,19 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { seasonHref, splitSeason } from "@/lib/paths";
 import { AnimatePresence, motion } from "motion/react";
 import clsx from "clsx";
-import { CalendarDays, GitCompareArrows, Search, Star, X } from "lucide-react";
+import { CalendarDays, ChevronDown, EyeOff, GitCompareArrows, Search, Star, Trophy, Tv, X } from "lucide-react";
 import { LEAGUES } from "@/lib/data/leagues";
-import { teamBySlug } from "@/lib/data/teams";
-import { Crest } from "@/components/ui/Crest";
-import { useFavorites } from "@/components/ui/Favorites";
+import { useFollowedTeams } from "@/lib/follow";
+import { TeamLogo } from "@/components/ui/TeamLogo";
+import { CompLogo } from "@/components/ui/CompLogo";
+import { compBySlug } from "@/lib/espn/competitions";
 import { Logo } from "./Logo";
 import { useMobileNav, usePalette } from "./Providers";
 import { LeagueMark } from "./LeagueMark";
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 
 function NavItem({ href, active, icon, children, trailing }: { href: string; active: boolean; icon: ReactNode; children: ReactNode; trailing?: ReactNode }) {
   const { setOpen } = useMobileNav();
@@ -42,18 +43,20 @@ function NavItem({ href, active, icon, children, trailing }: { href: string; act
 function SidebarInner() {
   const { season, rest: pathname } = splitSeason(usePathname() ?? "/");
   const href = (p: string) => seasonHref(p, season);
-  const { following } = useFavorites();
+  const sp = useSearchParams();
+  const lgParam = sp.get("lg");
+  const teamParam = sp.get("id");
+  const { teams } = useFollowedTeams();
   const { setOpen } = usePalette();
+  const [insights, setInsights] = useState(false);
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-12 items-center gap-2.5 px-4">
         <Logo />
-        <div className="leading-tight">
-          <div className="text-sm font-semibold tracking-[-0.01em]">Halfspace</div>
-        </div>
-        <span className="ml-auto rounded-[4px] bg-accent-soft px-1.5 py-px text-[10px] font-semibold text-accent-text" title="All features included">
-          PRO
+        <div className="text-sm font-semibold tracking-[-0.01em]">Halfspace</div>
+        <span className="ml-auto flex items-center gap-1 rounded-[4px] bg-[color-mix(in_oklab,var(--live)_14%,transparent)] px-1.5 py-px text-[10px] font-semibold text-live" title="Scores update live">
+          <span className="h-1.5 w-1.5 rounded-full bg-live" /> LIVE
         </span>
       </div>
 
@@ -74,20 +77,18 @@ function SidebarInner() {
           <NavItem href="/" active={pathname === "/"} icon={<CalendarDays size={15} />}>
             Matches
           </NavItem>
+          <NavItem href="/competitions" active={pathname.startsWith("/competitions")} icon={<Trophy size={15} />}>
+            Competitions
+          </NavItem>
+          <NavItem href="/studio" active={pathname.startsWith("/studio")} icon={<Tv size={15} />}>
+            Streamer studio
+          </NavItem>
+          <NavItem href="/glance" active={pathname.startsWith("/glance")} icon={<EyeOff size={15} />} trailing={<kbd className="!h-4 !min-w-4 text-[10px]">B</kbd>}>
+            Glance mode
+          </NavItem>
           <NavItem href={href("/compare")} active={pathname.startsWith("/compare")} icon={<GitCompareArrows size={15} />}>
             Compare
           </NavItem>
-        </div>
-
-        <div>
-          <div className="mb-1 px-2 text-2xs font-medium text-fg-4">Leagues</div>
-          <div className="space-y-px">
-            {LEAGUES.map((l) => (
-              <NavItem key={l.id} href={href(`/league/${l.id}`)} active={pathname.startsWith(`/league/${l.id}`)} icon={<LeagueMark id={l.id} size={15} />}>
-                {l.name}
-              </NavItem>
-            ))}
-          </div>
         </div>
 
         <div>
@@ -96,31 +97,58 @@ function SidebarInner() {
             <Star size={10} className="ml-1.5" />
           </div>
           <AnimatePresence initial={false}>
-            {following.length === 0 ? (
+            {teams.length === 0 ? (
               <motion.p key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-2 text-xs text-fg-4">
-                Star a team to pin it here.
+                Follow a team to pin its matches.
               </motion.p>
             ) : (
-              following.map((slug) => (
-                <motion.div key={slug} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                  <NavItem href={href(`/team/${slug}`)} active={pathname === `/team/${slug}`} icon={<Crest slug={slug} size={14} />}>
-                    {teamBySlug(slug)?.short ?? slug}
+              teams.map((t) => (
+                <motion.div key={t.id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+                  <NavItem href={`/team?id=${t.id}${t.league ? `&lg=${t.league}` : ""}`} active={pathname === "/team" && teamParam === t.id} icon={<TeamLogo src={t.logo} abbr={t.name.slice(0, 3)} size={15} />}>
+                    {t.name}
                   </NavItem>
                 </motion.div>
               ))
             )}
           </AnimatePresence>
         </div>
+
+        <div>
+          <div className="mb-1 px-2 text-2xs font-medium text-fg-4">Competitions</div>
+          <div className="space-y-px">
+            {SIDEBAR_COMPS.map((slug) => (
+              <NavItem key={slug} href={`/competition?lg=${slug}`} active={pathname === "/competition" && lgParam === slug} icon={<CompLogo slug={slug} size={15} />}>
+                {compBySlug(slug)?.short ?? slug}
+              </NavItem>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <button onClick={() => setInsights((o) => !o)} className="mb-1 flex w-full items-center px-2 text-2xs font-medium text-fg-4 hover:text-fg-3">
+            Season insights
+            <ChevronDown size={11} className={clsx("ml-1 transition-transform", !insights && "-rotate-90")} />
+          </button>
+          {(insights || pathname.startsWith("/league")) && (
+            <div className="space-y-px">
+              {LEAGUES.map((l) => (
+                <NavItem key={l.id} href={href(`/league/${l.id}`)} active={pathname.startsWith(`/league/${l.id}`)} icon={<LeagueMark id={l.id} size={15} />}>
+                  {l.name}
+                </NavItem>
+              ))}
+            </div>
+          )}
+        </div>
       </nav>
 
       <div className="border-t px-4 py-3 text-2xs leading-4 text-fg-4">
-        Real results from <span className="text-fg-3">openfootball</span>
-        <br />
-        Live overlay via ESPN when reachable
+        Live data <span className="text-fg-3">ESPN</span> · history <span className="text-fg-3">openfootball</span>
       </div>
     </div>
   );
 }
+
+const SIDEBAR_COMPS = ["eng.1", "esp.1", "ger.1", "ita.1", "fra.1", "uefa.champions", "uefa.europa", "fifa.world", "uefa.nations", "usa.1", "ksa.1", "ind.1"];
 
 export function Sidebar() {
   const { open, setOpen } = useMobileNav();

@@ -7,7 +7,6 @@ import { teamBySlug } from "@/lib/data/teams";
 import { teamLeagueSeason } from "@/lib/seasonOf";
 import { computeTable, halvesTable, htFtTable, isPlayed, positionRace, teamSeason } from "@/lib/derive";
 import { Crest } from "@/components/ui/Crest";
-import { FollowButton } from "@/components/ui/Favorites";
 import { FormStrip } from "@/components/ui/FormPill";
 import { Panel } from "@/components/ui/Panel";
 import { Stat } from "@/components/ui/Stat";
@@ -65,7 +64,6 @@ export async function TeamView({ slug, season }: { slug: string; season: SeasonI
                 <span>{ls.season.replace("-", "/")}</span>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <FollowButton slug={slug} withLabel />
                 {row.form.length > 0 && <FormStrip form={row.form} size={20} />}
               </div>
             </div>

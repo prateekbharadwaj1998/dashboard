@@ -1,8 +1,9 @@
 name: Deploy preview to GitHub Pages
 
-# Builds Halfspace as a static site with the freshest data available on the
-# runner (openfootball + ESPN live overlay) and publishes it to GitHub Pages.
-# Re-runs hourly so results keep flowing in without a new commit.
+# Builds Halfspace as a static site and publishes it to GitHub Pages.
+# Live scores, line-ups, squads and players load in the browser straight from
+# ESPN (CORS-enabled), so the site is real-time between builds. The hourly
+# rebuild refreshes the competition catalogue and the archive analytics.
 
 on:
   push:
@@ -37,6 +38,9 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      - name: Refresh competition catalogue (ESPN)
+        run: npm run catalog
 
       - name: Verify data layer
         run: npm run verify
