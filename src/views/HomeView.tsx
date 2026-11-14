@@ -9,7 +9,7 @@ import { useBrowserTz } from "@/lib/clientData";
 import { addDays, isDayKey } from "@/lib/data/time";
 import { localDayOf, useDayMatches, useGoalFlashes } from "@/lib/espn/useDay";
 import { rankMatches } from "@/lib/espn/importance";
-import { compBySlug, compLabel } from "@/lib/espn/competitions";
+import { compBySlug, compLabel, isRedundantNote } from "@/lib/espn/competitions";
 import type { MatchCard } from "@/lib/espn/normalize";
 import { useFollowedTeams } from "@/lib/follow";
 import { LiveMatchRow, espnMatchHref } from "@/components/live/LiveMatchRow";
@@ -22,11 +22,6 @@ import { LocalTime } from "@/components/match/LocalTime";
 // (unless a followed team plays); any featured competition does.
 const HERO_MIN = 40;
 const fmtDay = (day: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { ...o, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
-
-function redundantNote(note: string, name?: string, short?: string) {
-  const n = note.toLowerCase();
-  return [name, short].some((x) => x && (x.toLowerCase().includes(n) || n.includes(x.toLowerCase().replace(/^(english|spanish|german|italian|french) /, ""))));
-}
 
 function minuteOf(m: MatchCard) {
   if (m.status === "HT") return 45;
@@ -80,7 +75,7 @@ function Hero({ m, kind, flash }: { m: MatchCard; kind: "live" | "next" | "resul
             <CompLogo slug={m.league} size={18} />
             <span className="truncate">
               {comp?.name ?? compLabel(m.league)}
-              {m.note && !redundantNote(m.note, comp?.name, comp?.short) ? <span className="text-fg-4"> · {m.note}</span> : null}
+              {m.note && !isRedundantNote(m.note, m.league) ? <span className="text-fg-4"> · {m.note}</span> : null}
             </span>
           </span>
           <span className={clsx("shrink-0 rounded-full px-2 py-0.5 text-2xs font-semibold", live ? "bg-[color-mix(in_oklab,var(--live)_16%,transparent)] text-live" : "bg-hover text-fg-3")}>
@@ -226,6 +221,15 @@ export function HomeView() {
   const lowTierLiveOnly = live.length > 0 && hero?.kind !== "live";
   const top = ranked.filter((x) => x.m.id !== hero?.m.id && !(hero?.kind === "live" && x.m.state === "in" && otherLive.slice(0, 5).some((o) => o.m.id === x.m.id)));
   const shown = top.slice(0, expanded ? 20 : 8);
+  // Pick by importance, then read like a schedule: live first, then upcoming by
+  // kick-off, then results (latest first).
+  const sections = (
+    [
+      { key: "in", label: "Live", items: shown.filter((x) => x.m.state === "in") },
+      { key: "pre", label: "Upcoming", items: shown.filter((x) => x.m.state === "pre").sort((a, b) => a.m.date.localeCompare(b.m.date)) },
+      { key: "post", label: "Results", items: shown.filter((x) => x.m.state === "post").sort((a, b) => b.m.date.localeCompare(a.m.date)) },
+    ] as const
+  ).filter((sec) => sec.items.length);
   const comps = new Set(matches.map((m) => m.league)).size;
   const stale = updatedAt && pollMs && Date.now() - updatedAt > 2 * pollMs + 30_000;
 
@@ -316,8 +320,15 @@ export function HomeView() {
               <span className="text-2xs text-fg-4">Ranked by competition, stage and what&apos;s live</span>
             </div>
             <div className="panel px-1.5 py-1.5">
-              {shown.map((x, i) => (
-                <LiveMatchRow key={x.m.id} m={x.m} index={i} flash={flashes[x.m.id]} showLeague={compLabel(x.m.league)} />
+              {sections.map((sec, si) => (
+                <div key={sec.key} className={clsx(si > 0 && "mt-1.5 border-t border-line pt-1.5")}>
+                  <div className="px-2 pt-1 pb-0.5 text-2xs font-medium tracking-wide text-fg-4 uppercase">
+                    {sec.label}
+                  </div>
+                  {sec.items.map((x, i) => (
+                    <LiveMatchRow key={x.m.id} m={x.m} index={si * 3 + i} flash={flashes[x.m.id]} showLeague={compLabel(x.m.league)} />
+                  ))}
+                </div>
               ))}
               {!shown.length && <p className="py-6 text-center text-sm text-fg-4">That&apos;s the only match of note today.</p>}
             </div>

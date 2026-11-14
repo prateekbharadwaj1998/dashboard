@@ -79,6 +79,15 @@ export function compLabel(slug: string) {
   return c?.short || c?.name || slug;
 }
 
+/** True when a match note only repeats the competition name ("Brazil Serie B" under Brazil Serie B). */
+export function isRedundantNote(note: string, slug: string) {
+  const c = BY_SLUG.get(slug);
+  const norm = (x: string) =>
+    x.toLowerCase().replace(/^(english|spanish|german|italian|french|portuguese|dutch|brazil(ian)?|argentin[ae]|mexican) /, "").trim();
+  const n = norm(note);
+  return !!n && [c?.name, c?.short].some((x) => x && (norm(x).includes(n) || n.includes(norm(x))));
+}
+
 /** Competition logo; `dark` picks ESPN's dark-surface variant when one exists. */
 export function compLogo(slug: string, dark = true) {
   const c = BY_SLUG.get(slug);

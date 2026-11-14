@@ -304,10 +304,6 @@ kbd,
 }
 
 /* ------------------------------------------------------------- live rows */
-.live-row {
-  box-shadow: inset 2px 0 0 var(--live);
-  background: color-mix(in oklab, var(--live) 4%, transparent);
-}
 .blink-tick {
   animation: blink 1.2s ease-in-out infinite;
 }

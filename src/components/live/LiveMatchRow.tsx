@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from "motion/react";
 import type { MatchCard } from "@/lib/espn/normalize";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { LocalTime } from "@/components/match/LocalTime";
+import { CompLogo } from "@/components/ui/CompLogo";
+import { isRedundantNote } from "@/lib/espn/competitions";
 import { ScoreRoll } from "./ScoreRoll";
 
 export const espnMatchHref = (id: string) => `/match?id=${id}`;
@@ -15,7 +17,7 @@ function Minute({ m }: { m: MatchCard }) {
     const clock = (m.status || "").replace(/'$/, "");
     return (
       <span className="flex items-center gap-1.5 text-xs font-semibold text-live">
-        <span className="live-dot" />
+        <span className="live-dot shrink-0" />
         <span className="tnum">
           {ht ? "HT" : clock}
           {!ht && <span className="blink-tick">&apos;</span>}
@@ -44,7 +46,6 @@ const Card = ({ red }: { red: number }) =>
   ) : null;
 
 export function LiveMatchRow({ m, index = 0, flash, showLeague }: { m: MatchCard; index?: number; flash?: "home" | "away"; showLeague?: string }) {
-  const live = m.state === "in";
   const done = m.state === "post";
   const hs = m.home.score;
   const as = m.away.score;
@@ -53,6 +54,10 @@ export function LiveMatchRow({ m, index = 0, flash, showLeague }: { m: MatchCard
   const reds = (side: "home" | "away") => m.events.filter((e) => e.type === "red" && e.team === side).length;
   const scorers = (side: "home" | "away") =>
     m.events.filter((e) => (e.type === "goal" || e.type === "penalty" || e.type === "own-goal") && e.team === side);
+  const goals = [...scorers("home"), ...scorers("away")];
+  const pens = m.home.shootout != null || m.away.shootout != null;
+  // Drop notes that repeat the competition or the shoot-out line shown below.
+  const note = m.note && !isRedundantNote(m.note, m.league) && !(pens && /penalt/i.test(m.note)) ? m.note : undefined;
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -64,13 +69,11 @@ export function LiveMatchRow({ m, index = 0, flash, showLeague }: { m: MatchCard
         href={espnMatchHref(m.id)}
         className={clsx(
           "group relative grid min-h-11 items-center gap-2 rounded-lg px-2 py-1.5 transition-colors duration-100 hover:bg-hover",
-          "grid-cols-[44px_1fr_64px_1fr] sm:grid-cols-[56px_1fr_76px_1fr_minmax(0,140px)]",
-          live && "live-row",
+          "grid-cols-[54px_1fr_60px_1fr] sm:grid-cols-[64px_1fr_76px_1fr_minmax(0,160px)]",
         )}
       >
         <span className="flex flex-col leading-tight">
           <Minute m={m} />
-          {showLeague && <span className="truncate text-[10px] text-fg-4">{showLeague}</span>}
         </span>
         <span className={clsx("flex min-w-0 items-center justify-end gap-2 text-sm", aw ? "text-fg-3" : "text-fg", flash === "home" && "font-semibold")}>
           <Card red={reds("home")} />
@@ -84,7 +87,7 @@ export function LiveMatchRow({ m, index = 0, flash, showLeague }: { m: MatchCard
               transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
               className={clsx(
                 "relative inline-flex h-7 min-w-14 items-center justify-center gap-1 overflow-hidden rounded-md px-2 text-sm font-semibold",
-                live ? "bg-[color-mix(in_oklab,var(--live)_14%,transparent)] text-live" : "bg-hover text-fg",
+                "bg-hover text-fg",
                 flash && "ring-1 ring-win/40",
               )}
             >
@@ -116,18 +119,30 @@ export function LiveMatchRow({ m, index = 0, flash, showLeague }: { m: MatchCard
           <span className="truncate">{m.away.short}</span>
           <Card red={reds("away")} />
         </span>
-        <span className="hidden min-w-0 flex-col items-end text-[10.5px] leading-[14px] text-fg-4 sm:flex">
-          {(m.home.shootout != null || m.away.shootout != null) && (
+        {showLeague && (
+          <span className="col-span-3 col-start-2 -mt-1.5 truncate text-center text-[10px] text-fg-4 sm:hidden">
+            {[showLeague, note].filter(Boolean).join(" · ")}
+          </span>
+        )}
+        <span className="hidden min-w-0 flex-col items-end gap-0.5 text-[11px] leading-[14px] text-fg-4 sm:flex">
+          {(showLeague || note) && (
+            <span className="flex max-w-full items-center gap-1.5">
+              {showLeague && <CompLogo slug={m.league} size={12} />}
+              <span className="truncate" title={[showLeague, note].filter(Boolean).join(" · ")}>
+                {[showLeague, note].filter(Boolean).join(" · ")}
+              </span>
+            </span>
+          )}
+          {pens ? (
             <span className="tnum">
               Pens {m.home.shootout ?? 0}–{m.away.shootout ?? 0}
             </span>
-          )}
-          {[...scorers("home").slice(0, 2), ...scorers("away").slice(0, 2)].length > 0 && (
+          ) : goals.length > 0 ? (
             <span className="max-w-full truncate" title={m.events.filter((e) => e.type !== "yellow" && e.type !== "red").map((e) => `${e.player} ${e.minute}`).join(", ")}>
-              ⚽ {[...scorers("home"), ...scorers("away")].slice(0, 2).map((e) => `${(e.player ?? "").split(" ").slice(-1)[0]} ${e.minute}`).join(", ")}
+              {goals.slice(0, 2).map((e) => `${(e.player ?? "").split(" ").slice(-1)[0]} ${e.minute}`).join(", ")}
+              {goals.length > 2 && ` +${goals.length - 2}`}
             </span>
-          )}
-          {m.note && <span className="max-w-full truncate">{m.note}</span>}
+          ) : null}
         </span>
       </Link>
       <AnimatePresence>{flash && <motion.span key="sweep" className="goal-sweep" exit={{ opacity: 0 }} />}</AnimatePresence>
